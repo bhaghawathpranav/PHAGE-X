@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -10,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Sequence
 
@@ -19,6 +22,46 @@ from .species import fastani_available
 
 
 ESM2_MODEL = "esm2_t33_650M_UR50D"
+ESM2_MANIFEST = Path(__file__).parent.parent / "data" / "esm2" / "manifest.json"
+
+
+def esm2_checkpoint_directory() -> Path:
+    configured = os.getenv("PHAGEX_ESM2_CHECKPOINT_DIR")
+    return Path(configured) if configured else Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+
+
+def esm2_checkpoint_report() -> Dict[str, object]:
+    if not ESM2_MANIFEST.exists():
+        return {"ready": False, "reason": "checkpoint manifest is unavailable"}
+    manifest = json.loads(ESM2_MANIFEST.read_text(encoding="utf-8"))
+    directory = esm2_checkpoint_directory()
+    signatures = tuple(
+        (
+            item["filename"],
+            (directory / item["filename"]).stat().st_size,
+            (directory / item["filename"]).stat().st_mtime_ns,
+        )
+        for item in manifest["files"]
+        if (directory / item["filename"]).is_file()
+    )
+    if len(signatures) != len(manifest["files"]):
+        missing = next(item["filename"] for item in manifest["files"] if not (directory / item["filename"]).is_file())
+        return {"ready": False, "reason": f"missing {missing}"}
+    return _verify_esm2_files(json.dumps(manifest, sort_keys=True), str(directory), signatures)
+
+
+@lru_cache(maxsize=4)
+def _verify_esm2_files(manifest_json: str, directory_value: str, signatures: tuple) -> Dict[str, object]:
+    manifest = json.loads(manifest_json)
+    directory = Path(directory_value)
+    observed: Dict[str, str] = {}
+    for item in manifest["files"]:
+        path = directory / item["filename"]
+        digest = file_sha256(path)
+        if digest != item["sha256"]:
+            return {"ready": False, "reason": f"checksum mismatch for {item['filename']}"}
+        observed[item["filename"]] = digest
+    return {"ready": True, "sha256": observed}
 
 
 def find_executable(name: str) -> str | None:
@@ -73,6 +116,7 @@ class LocusFeatureResult:
 
 
 def capability_report() -> Dict[str, object]:
+    checkpoint = esm2_checkpoint_report()
     tools = {
         "kaptive": find_executable("kaptive"),
         "blastn": find_executable("blastn"),
@@ -80,6 +124,7 @@ def capability_report() -> Dict[str, object]:
         "fastani": fastani_available(),
         "torch": importlib.util.find_spec("torch") is not None,
         "esm": importlib.util.find_spec("esm") is not None,
+        "esm2_checkpoint": checkpoint["ready"],
     }
     blockers = [name for name, value in tools.items() if not value]
     return {
@@ -88,6 +133,7 @@ def capability_report() -> Dict[str, object]:
         "blockers": blockers,
         "esm2_model": ESM2_MODEL,
         "embedding_dimensions": 1280,
+        "esm2_checkpoint": checkpoint,
     }
 
 
@@ -352,7 +398,16 @@ class ESM2Embedder:
         except ImportError as error:
             raise RuntimeError("Local PyTorch and fair-esm are required for uncached ESM-2 inference") from error
         if self._model is None:
-            self._model, self._alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+            checkpoint = esm2_checkpoint_report()
+            if not checkpoint["ready"]:
+                raise RuntimeError(f"Verified local ESM-2 checkpoint required: {checkpoint['reason']}")
+            model_path = esm2_checkpoint_directory() / f"{ESM2_MODEL}.pt"
+            safe_globals = getattr(torch.serialization, "safe_globals", None)
+            if safe_globals:
+                with safe_globals([argparse.Namespace]):
+                    self._model, self._alphabet = esm.pretrained.load_model_and_alphabet_local(model_path)
+            else:
+                self._model, self._alphabet = esm.pretrained.load_model_and_alphabet_local(model_path)
             self._model.eval()
         converter = self._alphabet.get_batch_converter()
         cleaned = [sequence.strip().upper() for sequence in proteins]

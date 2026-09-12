@@ -1,0 +1,19 @@
+{
+  "model": "esm2_t33_650M_UR50D",
+  "dimensions": 1280,
+  "fair_esm_version": "2.0.0",
+  "torch_validated_version": "2.8.0",
+  "source": "Meta FAIR ESM",
+  "files": [
+    {
+      "filename": "esm2_t33_650M_UR50D.pt",
+      "url": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt",
+      "sha256": "ea9d0522b335a8778dea6535a65301f10208dece28cd5865482b0b1fc446168c"
+    },
+    {
+      "filename": "esm2_t33_650M_UR50D-contact-regression.pt",
+      "url": "https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt",
+      "sha256": "8ffe6edbd4173dc8d45c2cd5cb27d43aad77ec26b4c768200c58ae1f96693575"
+    }
+  ]
+}

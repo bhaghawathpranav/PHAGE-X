@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from pathlib import Path
 
@@ -8,7 +9,14 @@ from .config import get_settings
 from .assembly import parse_assembly_fasta
 from .data import load_demo_data
 from .feedback import LabObservationStore
-from .feature_providers import KaptiveRunner, capability_report
+from .feature_providers import (
+    ESM2_MODEL,
+    ESM2Embedder,
+    EmbeddingCache,
+    IsolateLocusFeaturePipeline,
+    KaptiveRunner,
+    capability_report,
+)
 from .inference import analyze, isolate_from_fasta
 from .observability import RequestContextMiddleware
 from .research_model import get_research_model
@@ -21,6 +29,7 @@ from .schemas import (
     IsolateSummary,
     IsolateLocusRequest,
     IsolateLocusResponse,
+    IsolateEmbeddingResponse,
     LabObservationRequest,
     LabObservationResponse,
     LocusProteinResponse,
@@ -205,4 +214,37 @@ def extract_isolate_locus(request: IsolateLocusRequest):
         raw_sequences_returned=False,
         sequence_persisted=False,
         disclaimer="Isolate-derived research features for laboratory validation only; not a susceptibility or treatment result.",
+    )
+
+
+@app.post("/api/embed-isolate-locus", response_model=IsolateEmbeddingResponse)
+def embed_isolate_locus(request: IsolateLocusRequest):
+    try:
+        _, qc = parse_assembly_fasta(request.fasta)
+        if qc.status != "pass":
+            raise ValueError("Assembly QC requires review before feature extraction")
+        species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
+        result = IsolateLocusFeaturePipeline(
+            KaptiveRunner(), ESM2Embedder(EmbeddingCache(Path(settings.embedding_cache)))
+        ).build(request.fasta)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return IsolateEmbeddingResponse(
+        assembly_sha256=qc.assembly_sha256,
+        locus=result.locus,
+        species_status=species.status,
+        species_ani_percent=species.ani_percent,
+        species_alignment_fraction=species.alignment_fraction,
+        protein_count=result.protein_count,
+        protein_set_sha256=result.protein_set_sha256,
+        model=ESM2_MODEL,
+        dimensions=int(result.embedding.shape[0]),
+        embedding_cache_key=result.embedding_cache_key,
+        embedding_sha256=hashlib.sha256(result.embedding.tobytes()).hexdigest(),
+        pipeline_status="feature-vector-ready-for-research-ranking",
+        raw_embedding_returned=False,
+        sequence_persisted=False,
+        disclaimer="ESM-2 research feature for laboratory validation only; not a susceptibility or treatment result.",
     )

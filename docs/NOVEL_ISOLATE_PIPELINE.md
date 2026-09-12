@@ -17,6 +17,9 @@
 13. Ephemeral sequence handling with metadata-only API responses
 14. Checksum-pinned offline fastANI confirmation against NCBI RefSeq `GCF_000240185.1`
 15. Fail-closed 95% ANI and 65% aligned-fragment gates before K-locus extraction
+16. Checksum-pinned ESM-2 model and contact-regression manifests
+17. Strictly local checkpoint loading with PyTorch 2.6+ safe-global compatibility
+18. End-to-end isolate feature endpoint returning vector provenance, never the raw vector
 
 ## Current blocking boundary
 
@@ -28,11 +31,13 @@ Species confirmation now runs before K-locus extraction. The extraction endpoint
 
 One reference and a conventional ANI cutoff are not sufficient validation across the full _K. pneumoniae_ species complex. A curated multi-reference panel, near-neighbor rejection set, contaminated/mixed assembly tests, and taxonomic expert review remain required. This gate establishes software evidence only and does not establish phage susceptibility.
 
-The development environment has Kaptive 3.2, minimap2 2.31, fastANI 1.33, and BLAST+ 2.17 installed. PyTorch and `fair-esm` remain unavailable, so `GET /api/processing-capabilities` reports those exact blockers. `POST /api/inspect-assembly` does not silently fall back to the demo hash representation.
+The development environment has Kaptive 3.2, minimap2 2.31, fastANI 1.33, BLAST+ 2.17, PyTorch 2.8, and `fair-esm` 2.0. The official 650M checkpoint and contact-regression sidecar are locally cached and SHA-256 verified. `GET /api/processing-capabilities` reports the complete runtime ready. `POST /api/embed-isolate-locus` performs QC, species confirmation, isolate K-locus translation, ESM-2 inference, and sequence-free caching; it returns only digests and summary metadata.
 
 ## Installation boundary
 
-Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while minimap2 and fastANI must be provided by the execution environment. BLAST+ remains part of the planned broader sequence-analysis environment. PyTorch is platform-specific; install the appropriate CPU/CUDA build and `fair-esm==2.0.0` in a dedicated feature-extraction environment. The 650M ESM-2 weights are large and should be checksum-pinned and cached by deployment infrastructure rather than downloaded during an API request.
+Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while minimap2 and fastANI must be provided by the execution environment. BLAST+ remains part of the planned broader sequence-analysis environment. The validated CPU runtime is pinned in `backend/requirements-embedding.txt`. `scripts/fetch_esm2_checkpoint.py` downloads both official files atomically and verifies their manifest digests; runtime requests never download weights.
+
+On the development Apple Silicon CPU, verified local inference took 3.74 seconds for one short protein and 29.89 seconds for the 16-protein KL107 set. A complete RefSeq assembly took 39.84 seconds through QC, ANI, Kaptive, and the 21-protein KL103 embedding; the identical cached API request returned the same vector digest in 2.42 seconds. The isolated vector-cache lookup took 1.3 milliseconds. These are development observations, not deployment SLOs; concurrent production extraction still requires a bounded worker queue.
 
 ## Required validation
 

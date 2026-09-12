@@ -15,6 +15,7 @@ class Settings:
     log_level: str
     app_version: str
     feedback_db: str
+    embedding_cache: str
 
     @property
     def is_production(self) -> bool:
@@ -38,4 +39,5 @@ def get_settings() -> Settings:
         log_level=os.getenv("PHAGEX_LOG_LEVEL", "INFO").upper(),
         app_version=os.getenv("PHAGEX_VERSION", "0.2.0"),
         feedback_db=os.getenv("PHAGEX_FEEDBACK_DB", "work/phagex_feedback.sqlite3"),
+        embedding_cache=os.getenv("PHAGEX_EMBEDDING_CACHE", "work/esm2_embeddings.sqlite3"),
     )

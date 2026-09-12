@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
-import type { Analysis, AssemblyInspection, Isolate, IsolateLocusExtraction, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
+import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
+import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -193,11 +193,13 @@ export default function App() {
   const [capabilities, setCapabilities] = useState<ProcessingCapabilities | null>(null);
   const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
   const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
+  const [isolateEmbedding, setIsolateEmbedding] = useState<IsolateEmbedding | null>(null);
   const [fasta, setFasta] = useState(demoFasta);
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
   const [loading, setLoading] = useState(false);
+  const [featureLoading, setFeatureLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -278,12 +280,12 @@ export default function App() {
                     accept=".fasta,.fa,.fna,text/plain"
                     onChange={async (event) => {
                       const file = event.target.files?.[0];
-                      if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); }
+                      if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }
                     }}
                   />
                 </label>
               </div>
-              <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); }} spellCheck={false} />
+              <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }} spellCheck={false} />
               <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
@@ -305,6 +307,15 @@ export default function App() {
                 }}>Extract isolate K-locus proteins</button>
               )}
               {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} validated proteins · {locusExtraction.percent_identity.toFixed(1)}% identity · {locusExtraction.percent_coverage.toFixed(1)}% coverage</span><small>Species confirmed at {locusExtraction.species_ani_percent.toFixed(2)}% ANI ({Math.round(locusExtraction.species_alignment_fraction * 100)}% aligned) · Scoring remains {locusExtraction.pipeline_status.replaceAll("-", " ")}</small></div>}
+              {locusExtraction && capabilities?.novel_isolate_pipeline_ready && (
+                <button className="inspect-button" disabled={featureLoading} onClick={async () => {
+                  setError(""); setIsolateEmbedding(null); setFeatureLoading(true);
+                  try { setIsolateEmbedding(await embedIsolateLocus(fasta)); }
+                  catch (err) { setError(err instanceof Error ? err.message : "ESM-2 embedding failed"); }
+                  finally { setFeatureLoading(false); }
+                }}>{featureLoading ? "Generating local ESM-2 feature…" : "Generate verified ESM-2 feature"}</button>
+              )}
+              {isolateEmbedding && <div className="inspection-result"><strong>ESM-2 feature ready</strong><span>{isolateEmbedding.dimensions.toLocaleString()} dimensions · {isolateEmbedding.model}</span><small>Vector cached without raw sequence · Research ranking only</small></div>}
             </div>
           ) : (
             <div className="research-picker">

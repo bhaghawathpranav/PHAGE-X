@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 import importlib
+import numpy as np
 
 from app.main import app
 from app.feature_providers import IsolateLocusProteinSet
@@ -122,8 +123,16 @@ def test_isolate_locus_endpoint_returns_only_provenance_metadata(monkeypatch):
                 fastani_version="version 1.33",
             )
 
+    class Embedder:
+        def __init__(self, cache):
+            pass
+
+        def embed(self, sequences):
+            return np.ones(1280, dtype=np.float32)
+
     monkeypatch.setattr(main_module, "KaptiveRunner", Runner)
     monkeypatch.setattr(main_module, "FastANIRunner", SpeciesRunner)
+    monkeypatch.setattr(main_module, "ESM2Embedder", Embedder)
     fasta = ">chromosome\n" + "ACGT" * 1_000_000
     response = client.post("/api/extract-isolate-locus", json={"fasta": fasta})
     assert response.status_code == 200
@@ -137,3 +146,12 @@ def test_isolate_locus_endpoint_returns_only_provenance_metadata(monkeypatch):
     assert result["raw_sequences_returned"] is False
     assert result["sequence_persisted"] is False
     assert "sequences" not in result
+
+    embedding_response = client.post("/api/embed-isolate-locus", json={"fasta": fasta})
+    assert embedding_response.status_code == 200
+    embedding = embedding_response.json()
+    assert embedding["dimensions"] == 1280
+    assert embedding["model"] == "esm2_t33_650M_UR50D"
+    assert embedding["raw_embedding_returned"] is False
+    assert embedding["sequence_persisted"] is False
+    assert len(embedding["embedding_sha256"]) == 64

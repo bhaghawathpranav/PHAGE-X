@@ -114,3 +114,21 @@ export type IsolateLocusExtraction = {
   sequence_persisted: boolean;
   disclaimer: string;
 };
+
+export type IsolateEmbedding = {
+  assembly_sha256: string;
+  locus: string;
+  species_status: string;
+  species_ani_percent: number;
+  species_alignment_fraction: number;
+  protein_count: number;
+  protein_set_sha256: string;
+  model: string;
+  dimensions: number;
+  embedding_cache_key: string;
+  embedding_sha256: string;
+  pipeline_status: string;
+  raw_embedding_returned: boolean;
+  sequence_persisted: boolean;
+  disclaimer: string;
+};

@@ -1,4 +1,4 @@
-import type { Analysis, AssemblyInspection, Isolate, IsolateLocusExtraction, ProcessingCapabilities, ResearchRank } from "./types";
+import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, ProcessingCapabilities, ResearchRank } from "./types";
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:8000");
 
@@ -60,6 +60,16 @@ export async function inspectAssembly(fasta: string): Promise<AssemblyInspection
 export async function extractIsolateLocus(fasta: string): Promise<IsolateLocusExtraction> {
   return parse(
     await fetch(`${API}/api/extract-isolate-locus`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fasta }),
+    }),
+  );
+}
+
+export async function embedIsolateLocus(fasta: string): Promise<IsolateEmbedding> {
+  return parse(
+    await fetch(`${API}/api/embed-isolate-locus`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta }),

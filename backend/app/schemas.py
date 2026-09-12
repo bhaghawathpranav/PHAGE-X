@@ -183,3 +183,21 @@ class IsolateLocusResponse(BaseModel):
     raw_sequences_returned: bool
     sequence_persisted: bool
     disclaimer: str
+
+
+class IsolateEmbeddingResponse(BaseModel):
+    assembly_sha256: str
+    locus: str
+    species_status: str
+    species_ani_percent: float
+    species_alignment_fraction: float
+    protein_count: int
+    protein_set_sha256: str
+    model: str
+    dimensions: int
+    embedding_cache_key: str
+    embedding_sha256: str
+    pipeline_status: str
+    raw_embedding_returned: bool
+    sequence_persisted: bool
+    disclaimer: str

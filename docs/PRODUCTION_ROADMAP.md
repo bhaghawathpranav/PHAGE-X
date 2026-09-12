@@ -32,7 +32,7 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Exit gate:** Sequence QC, species confirmation, MLST/K-locus calling, receptor/RBP features, cached ESM-2 embeddings, provenance, deterministic processing, and failure handling pass on a reference set.
 
-**Status:** Real released ESM-2 embeddings are supported for model development. Multi-contig upload QC checks size, alphabet, ambiguity, GC, total length, N50, and digest. Canonical and isolate-derived K-locus proteins can be extracted, completeness-validated, provenance-fingerprinted, and handed to the 1,280-dimensional ESM-2 contract. Species confirmation now runs offline with fastANI against checksum-pinned NCBI RefSeq `GCF_000240185.1`, requiring at least 95% ANI and 65% aligned fragments. The complete reference passes ANI and Kaptive together; unrelated sequence is rejected. The local ESM-2 runtime, a curated multi-reference/near-neighbor validation panel, and receptor/RBP extraction remain blocking; demo uploads still say placeholder explicitly.
+**Status:** Multi-contig upload QC, checksum-pinned fastANI species confirmation, isolate-derived Kaptive proteins, verified local ESM-2 650M inference, and sequence-free vector caching now run end to end. The complete NCBI reference passes ANI and Kaptive together; unrelated sequence is rejected. KL107 produces a finite 1,280-dimensional vector, and the API/UI expose only provenance metadata. A curated multi-reference/near-neighbor validation panel, receptor/RBP extraction, queue/resource controls, and exact PhageHostLearn preprocessing parity remain blocking; demo uploads still say placeholder explicitly.
 
 ## M4 — Trained compatibility model
 
