@@ -21,6 +21,7 @@ from .inference import analyze, isolate_from_fasta
 from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
 from .phage_catalog import validate_phage_catalog
+from .phage_screening import evidence_status, load_reviewed_metadata, registry_status
 from .research_model import get_research_model
 from .real_cocktail import optimize_reviewed_cocktail
 from .species import FastANIRunner
@@ -136,6 +137,19 @@ def research_model_status():
 @app.get("/api/phage-catalog")
 def phage_catalog_status():
     return validate_phage_catalog()
+
+
+@app.get("/api/phage-evidence")
+def phage_evidence_registry():
+    return registry_status()
+
+
+@app.get("/api/phage-evidence/{phage_id}")
+def phage_evidence(phage_id: str):
+    try:
+        return evidence_status(phage_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Phage not found in verified catalog") from error
 
 
 @app.get("/api/research-isolates", response_model=list[str])
@@ -290,7 +304,7 @@ def rank_novel_isolate(request: NovelIsolateRankRequest):
         model = get_research_model()
         distribution = model.distribution_check(features.embedding)
         candidates = model.rank_vector(features.embedding, request.limit)
-        cocktail = optimize_reviewed_cocktail(candidates, [], 3)
+        cocktail = optimize_reviewed_cocktail(candidates, load_reviewed_metadata(), 3)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except RuntimeError as error:

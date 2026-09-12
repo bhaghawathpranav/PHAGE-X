@@ -52,7 +52,7 @@ The offline runtime now also contains the authors' raw genome archive for all 10
 
 **Status:** The demo exhaustively compares combinations, enforces minimum family and receptor diversity, and records passed constraints. Historical/laboratory combination validation and uncertainty-aware abstention remain.
 
-The real-catalog optimizer is also implemented and fail-closed: every selected member must have independently reviewed genomic safety evidence plus family and receptor metadata. It abstains on the current catalog because that evidence has not been supplied; synthetic unit fixtures prove the constraint and objective logic without presenting fabricated biological metadata.
+The real-catalog optimizer is also implemented and fail-closed: every selected member must have independently reviewed genomic safety evidence plus family and receptor metadata. The app now performs traceable per-phage genome QC and maintains a versioned reviewed-evidence registry, while explicitly keeping sequence QC separate from biological safety clearance. It abstains on the current catalog because independent evidence has not been supplied; synthetic unit fixtures prove the constraint and objective logic without presenting fabricated biological metadata.
 
 ## M6 — Genomic safety-screening gate
 
