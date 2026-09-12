@@ -33,6 +33,8 @@ from .schemas import (
     LabObservationRequest,
     LabObservationResponse,
     LocusProteinResponse,
+    NovelIsolateRankRequest,
+    NovelIsolateRankResponse,
     ResearchRankRequest,
     ResearchRankResponse,
 )
@@ -247,4 +249,42 @@ def embed_isolate_locus(request: IsolateLocusRequest):
         raw_embedding_returned=False,
         sequence_persisted=False,
         disclaimer="ESM-2 research feature for laboratory validation only; not a susceptibility or treatment result.",
+    )
+
+
+@app.post("/api/rank-novel-isolate", response_model=NovelIsolateRankResponse)
+def rank_novel_isolate(request: NovelIsolateRankRequest):
+    try:
+        _, qc = parse_assembly_fasta(request.fasta)
+        if qc.status != "pass":
+            raise ValueError("Assembly QC requires review before real-catalog ranking")
+        species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
+        features = IsolateLocusFeaturePipeline(
+            KaptiveRunner(), ESM2Embedder(EmbeddingCache(Path(settings.embedding_cache)))
+        ).build(request.fasta)
+        model = get_research_model()
+        distribution = model.distribution_check(features.embedding)
+        candidates = model.rank_vector(features.embedding, request.limit)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return NovelIsolateRankResponse(
+        assembly_sha256=qc.assembly_sha256,
+        locus=features.locus,
+        species_status=species.status,
+        species_ani_percent=species.ani_percent,
+        model_version=model.card["artifact_version"],
+        feature_source="isolate K-locus ESM-2 + released PhageHostLearn mean-RBP ESM-2",
+        feature_sha256=hashlib.sha256(features.embedding.tobytes()).hexdigest(),
+        distribution_status=distribution["status"],
+        nearest_reference_cosine=distribution["nearest_reference_cosine"],
+        candidates=candidates,
+        cocktail_status="blocked",
+        cocktail_blockers=[
+            "Phage genomic safety evidence has not been independently reviewed",
+            "Receptor and family diversity metadata are not present in the released runtime catalog",
+            "Novel-isolate predictions require laboratory confirmation",
+        ],
+        disclaimer="For laboratory validation only — novel-isolate research ranking, not treatment selection.",
     )

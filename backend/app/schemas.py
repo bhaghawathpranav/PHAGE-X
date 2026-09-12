@@ -110,6 +110,7 @@ class ResearchCandidate(BaseModel):
     compatibility: float
     decision: str
     safety_status: str
+    rationale: List[str] = []
 
 
 class ResearchRankResponse(BaseModel):
@@ -200,4 +201,25 @@ class IsolateEmbeddingResponse(BaseModel):
     pipeline_status: str
     raw_embedding_returned: bool
     sequence_persisted: bool
+    disclaimer: str
+
+
+class NovelIsolateRankRequest(BaseModel):
+    fasta: str = Field(min_length=100, max_length=15_000_000)
+    limit: int = Field(default=20, ge=1, le=105)
+
+
+class NovelIsolateRankResponse(BaseModel):
+    assembly_sha256: str
+    locus: str
+    species_status: str
+    species_ani_percent: float
+    model_version: str
+    feature_source: str
+    feature_sha256: str
+    distribution_status: str
+    nearest_reference_cosine: float
+    candidates: List[ResearchCandidate]
+    cocktail_status: str
+    cocktail_blockers: List[str]
     disclaimer: str

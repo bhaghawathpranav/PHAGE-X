@@ -1,4 +1,4 @@
-import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, ProcessingCapabilities, ResearchRank } from "./types";
+import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, ResearchRank } from "./types";
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:8000");
 
@@ -73,6 +73,16 @@ export async function embedIsolateLocus(fasta: string): Promise<IsolateEmbedding
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta }),
+    }),
+  );
+}
+
+export async function rankNovelIsolate(fasta: string): Promise<NovelIsolateRank> {
+  return parse(
+    await fetch(`${API}/api/rank-novel-isolate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fasta, limit: 20 }),
     }),
   );
 }

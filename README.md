@@ -19,6 +19,7 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Fail-closed isolate-derived K-locus protein extraction with ephemeral sequence handling
 - Offline fastANI species confirmation against a checksum-pinned NCBI RefSeq genome
 - Verified local ESM-2 650M inference with a sequence-free persistent vector cache
+- Novel-isolate ranking against all 105 released PhageHostLearn RBP profiles
 
 ## Run locally
 
@@ -52,7 +53,7 @@ The dataset is deliberately synthetic-compatible: it supports a reproducible pro
 
 The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
-The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. The API confirms species by ANI, extracts validated isolate-derived K-locus proteins, and generates a cached ESM-2 feature. Real candidate scoring remains blocked until receptor/RBP features, preprocessing parity, and broader reference-panel validation pass. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
+The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. With the complete local toolchain, an uploaded assembly is species-confirmed, K-locus typed, embedded, distribution-checked, and ranked against 105 released phage RBP profiles. Real cocktail construction remains blocked until independent phage safety and diversity metadata are available. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
 
 To enable offline ESM-2 extraction, install `backend/requirements-embedding.txt`, run `scripts/fetch_esm2_checkpoint.py` once, and use `scripts/precompute_esm2.py` to warm canonical locus vectors. The 2.60 GB checkpoint is kept in the local Torch cache and verified against `backend/data/esm2/manifest.json`; it is not stored in Git.
 

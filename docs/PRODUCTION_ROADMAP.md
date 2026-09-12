@@ -32,7 +32,7 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Exit gate:** Sequence QC, species confirmation, MLST/K-locus calling, receptor/RBP features, cached ESM-2 embeddings, provenance, deterministic processing, and failure handling pass on a reference set.
 
-**Status:** Multi-contig upload QC, checksum-pinned fastANI species confirmation, isolate-derived Kaptive proteins, verified local ESM-2 650M inference, and sequence-free vector caching now run end to end. The complete NCBI reference passes ANI and Kaptive together; unrelated sequence is rejected. KL107 produces a finite 1,280-dimensional vector, and the API/UI expose only provenance metadata. A curated multi-reference/near-neighbor validation panel, receptor/RBP extraction, queue/resource controls, and exact PhageHostLearn preprocessing parity remain blocking; demo uploads still say placeholder explicitly.
+**Status:** Multi-contig upload QC, checksum-pinned fastANI species confirmation, isolate-derived Kaptive proteins, verified local ESM-2 650M inference, sequence-free caching, distribution checking, and calibrated ranking against all 105 released mean-RBP embeddings now run end to end. The complete NCBI reference reaches a real research ranking in about three seconds from cache. A curated multi-reference/near-neighbor validation panel, independently reviewed phage metadata, queue/resource controls, and exact PhageHostLearn preprocessing parity remain blocking.
 
 ## M4 — Trained compatibility model
 

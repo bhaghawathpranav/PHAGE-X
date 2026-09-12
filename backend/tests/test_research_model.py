@@ -1,4 +1,5 @@
 from app.research_model import get_research_model
+import numpy as np
 
 
 def test_research_artifact_is_blocked_from_release():
@@ -21,3 +22,21 @@ def test_held_out_host_ranking_uses_real_embeddings_and_blocks_cocktail():
         for index in range(9)
     )
     assert all(item.safety_status.startswith("blocked") for item in result.candidates)
+
+
+def test_novel_vector_path_uses_same_real_phage_catalog():
+    model = get_research_model()
+    vector = model.host_vectors[0].copy()
+    distribution = model.distribution_check(vector)
+    candidates = model.rank_vector(vector, 7)
+    assert distribution["status"] == "within-runtime-reference-envelope"
+    assert distribution["nearest_reference_cosine"] > 0.999
+    assert len(candidates) == 7
+    assert all(candidate.rationale for candidate in candidates)
+    assert all(candidate.safety_status.startswith("blocked") for candidate in candidates)
+
+
+def test_out_of_distribution_vector_is_rejected():
+    model = get_research_model()
+    with np.testing.assert_raises_regex(ValueError, "outside"):
+        model.rank_vector(np.zeros(1280, dtype=np.float32), 5)

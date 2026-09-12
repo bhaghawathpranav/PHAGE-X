@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
-import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
+import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankNovelIsolate, rankResearchHost } from "./api";
+import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -184,6 +184,22 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
   );
 }
 
+function NovelResults({ result, onReset }: { result: NovelIsolateRank; onReset: () => void }) {
+  return (
+    <main className="results page-shell">
+      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.model_version} · {result.species_ani_percent.toFixed(2)}% species ANI</p></div><button className="ghost-button" onClick={onReset}>New analysis</button></div>
+      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
+      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Real ranking stops at laboratory prioritization</h2>{result.cocktail_blockers.map((item) => <p key={item}>{item}</p>)}</div></section>
+      <section className="panel ranking-panel">
+        <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
+        <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
+        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
+      </section>
+      <section className="limitations"><Info size={20} /><div><h3>Feature provenance</h3><p>{result.feature_source}</p><p>{result.distribution_status.replaceAll("-", " ")} · nearest reference cosine {result.nearest_reference_cosine.toFixed(3)}</p></div></section>
+    </main>
+  );
+}
+
 export default function App() {
   const [isolates, setIsolates] = useState<Isolate[]>([]);
   const [selected, setSelected] = useState("kp-mdr-001");
@@ -198,6 +214,7 @@ export default function App() {
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
+  const [novelResult, setNovelResult] = useState<NovelIsolateRank | null>(null);
   const [loading, setLoading] = useState(false);
   const [featureLoading, setFeatureLoading] = useState(false);
   const [error, setError] = useState("");
@@ -216,6 +233,8 @@ export default function App() {
     try {
       if (mode === "research") {
         setResearchResult(await rankResearchHost(researchHost));
+      } else if (mode === "upload" && capabilities?.novel_isolate_pipeline_ready) {
+        setNovelResult(await rankNovelIsolate(fasta));
       } else {
         const next = await analyze(mode === "demo"
           ? { isolate_id: selected, cocktail_size: size }
@@ -232,6 +251,7 @@ export default function App() {
 
   if (result) return <><Header /><Results result={result} onReset={() => setResult(null)} /></>;
   if (researchResult) return <><Header /><ResearchResults result={researchResult} onReset={() => setResearchResult(null)} /></>;
+  if (novelResult) return <><Header /><NovelResults result={novelResult} onReset={() => setNovelResult(null)} /></>;
 
   return (
     <div className="app">
@@ -330,7 +350,7 @@ export default function App() {
           {mode !== "research" && <div className="size-picker"><span>Cocktail size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
           {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
           <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "research" && !researchHost)}>
-            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>{mode === "research" ? "Run held-out benchmark" : "Run candidate discovery"} <ArrowRight size={18} /></>}
+            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>{mode === "research" ? "Run held-out benchmark" : mode === "upload" && capabilities?.novel_isolate_pipeline_ready ? "Run real catalog ranking" : "Run candidate discovery"} <ArrowRight size={18} /></>}
           </button>
           <p className="privacy"><ShieldCheck size={13} /> Runs locally. No external APIs or sequence uploads.</p>
         </section>

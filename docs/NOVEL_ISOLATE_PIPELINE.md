@@ -20,6 +20,8 @@
 16. Checksum-pinned ESM-2 model and contact-regression manifests
 17. Strictly local checkpoint loading with PyTorch 2.6+ safe-global compatibility
 18. End-to-end isolate feature endpoint returning vector provenance, never the raw vector
+19. Embedding-distribution envelope check against runtime reference hosts
+20. Calibrated ranking against 105 released mean-RBP phage embeddings with per-candidate feature evidence
 
 ## Current blocking boundary
 
@@ -31,7 +33,7 @@ Species confirmation now runs before K-locus extraction. The extraction endpoint
 
 One reference and a conventional ANI cutoff are not sufficient validation across the full _K. pneumoniae_ species complex. A curated multi-reference panel, near-neighbor rejection set, contaminated/mixed assembly tests, and taxonomic expert review remain required. This gate establishes software evidence only and does not establish phage susceptibility.
 
-The development environment has Kaptive 3.2, minimap2 2.31, fastANI 1.33, BLAST+ 2.17, PyTorch 2.8, and `fair-esm` 2.0. The official 650M checkpoint and contact-regression sidecar are locally cached and SHA-256 verified. `GET /api/processing-capabilities` reports the complete runtime ready. `POST /api/embed-isolate-locus` performs QC, species confirmation, isolate K-locus translation, ESM-2 inference, and sequence-free caching; it returns only digests and summary metadata.
+The development environment has Kaptive 3.2, minimap2 2.31, fastANI 1.33, BLAST+ 2.17, PyTorch 2.8, and `fair-esm` 2.0. The official 650M checkpoint and contact-regression sidecar are locally cached and SHA-256 verified. `GET /api/processing-capabilities` reports the complete runtime ready. `POST /api/rank-novel-isolate` performs QC, species confirmation, isolate K-locus translation, ESM-2 inference, distribution checking, and real-catalog ranking. It returns only digests, scores, and summary evidence.
 
 ## Installation boundary
 

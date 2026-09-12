@@ -132,3 +132,19 @@ export type IsolateEmbedding = {
   sequence_persisted: boolean;
   disclaimer: string;
 };
+
+export type NovelIsolateRank = {
+  assembly_sha256: string;
+  locus: string;
+  species_status: string;
+  species_ani_percent: number;
+  model_version: string;
+  feature_source: string;
+  feature_sha256: string;
+  distribution_status: string;
+  nearest_reference_cosine: number;
+  candidates: ResearchRank["candidates"];
+  cocktail_status: string;
+  cocktail_blockers: string[];
+  disclaimer: string;
+};
