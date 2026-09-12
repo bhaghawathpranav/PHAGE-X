@@ -16,7 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankNovelIsolate, rankResearchHost } from "./api";
+import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
@@ -234,7 +234,7 @@ export default function App() {
       if (mode === "research") {
         setResearchResult(await rankResearchHost(researchHost));
       } else if (mode === "upload" && capabilities?.novel_isolate_pipeline_ready) {
-        setNovelResult(await rankNovelIsolate(fasta));
+        setNovelResult(await rankNovelIsolateInBackground(fasta));
       } else {
         const next = await analyze(mode === "demo"
           ? { isolate_id: selected, cocktail_size: size }

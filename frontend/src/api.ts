@@ -77,12 +77,23 @@ export async function embedIsolateLocus(fasta: string): Promise<IsolateEmbedding
   );
 }
 
-export async function rankNovelIsolate(fasta: string): Promise<NovelIsolateRank> {
-  return parse(
-    await fetch(`${API}/api/rank-novel-isolate`, {
+export async function rankNovelIsolateInBackground(fasta: string): Promise<NovelIsolateRank> {
+  const job = await parse<{ job_id: string }>(
+    await fetch(`${API}/api/jobs/novel-rank`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta, limit: 20 }),
     }),
   );
+  for (let attempt = 0; attempt < 800; attempt += 1) {
+    const status = await parse<{ status: string; result?: NovelIsolateRank; error?: string }>(
+      await fetch(`${API}/api/jobs/${job.job_id}`),
+    );
+    if (status.status === "succeeded" && status.result) return status.result;
+    if (status.status === "failed" || status.status === "cancelled") {
+      throw new Error(status.error || `Feature job ${status.status}.`);
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 750));
+  }
+  throw new Error("Feature job exceeded the local ten-minute limit.");
 }

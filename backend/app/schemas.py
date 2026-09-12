@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -223,3 +223,13 @@ class NovelIsolateRankResponse(BaseModel):
     cocktail_status: str
     cocktail_blockers: List[str]
     disclaimer: str
+
+
+class JobResponse(BaseModel):
+    job_id: str
+    status: str
+    created_at: str
+    updated_at: str
+    result: Optional[Dict[str, object]] = None
+    error: Optional[str] = None
+    cancel_requested: bool

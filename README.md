@@ -20,6 +20,7 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Offline fastANI species confirmation against a checksum-pinned NCBI RefSeq genome
 - Verified local ESM-2 650M inference with a sequence-free persistent vector cache
 - Novel-isolate ranking against all 105 released PhageHostLearn RBP profiles
+- Bounded background feature jobs and a fail-closed reviewed-evidence cocktail optimizer
 
 ## Run locally
 

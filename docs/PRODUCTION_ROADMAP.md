@@ -50,6 +50,8 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Status:** The demo exhaustively compares combinations, enforces minimum family and receptor diversity, and records passed constraints. Historical/laboratory combination validation and uncertainty-aware abstention remain.
 
+The real-catalog optimizer is also implemented and fail-closed: every selected member must have independently reviewed genomic safety evidence plus family and receptor metadata. It abstains on the current catalog because that evidence has not been supplied; synthetic unit fixtures prove the constraint and objective logic without presenting fabricated biological metadata.
+
 ## M6 — Genomic safety-screening gate
 
 **Outcome:** Exclude unsuitable phages before ranking or cocktail construction.
@@ -81,6 +83,8 @@ Production means more than putting the current demo on a server. Each milestone 
 **Exit gate:** Model registry, signed artifacts, data/model lineage, drift and data-quality monitoring, SLOs, alerts, incident response, rollback/canary procedures, cost limits, and disaster recovery exercises pass.
 
 **Status:** Training emits source SHA-256 lineage, runtime versions, a model card, release decision, and a tamper-detecting artifact manifest. Signing, monitoring, rollback exercises, and operational ownership remain.
+
+Novel-isolate computation now uses a one-worker bounded queue with two waiting slots, cancellation, explicit failed/succeeded states, redacted errors, and one-hour terminal-result retention. An operations endpoint reports queue state. Durable external job storage, multi-process coordination, alerts, and disaster-recovery exercises remain deployment work.
 
 ## M10 — Staged release and governance
 

@@ -18,8 +18,10 @@ from .feature_providers import (
     capability_report,
 )
 from .inference import analyze, isolate_from_fasta
+from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
 from .research_model import get_research_model
+from .real_cocktail import optimize_reviewed_cocktail
 from .species import FastANIRunner
 from .schemas import (
     AnalysisResponse,
@@ -32,6 +34,7 @@ from .schemas import (
     IsolateEmbeddingResponse,
     LabObservationRequest,
     LabObservationResponse,
+    JobResponse,
     LocusProteinResponse,
     NovelIsolateRankRequest,
     NovelIsolateRankResponse,
@@ -41,6 +44,7 @@ from .schemas import (
 
 
 settings = get_settings()
+novel_rank_jobs = BoundedJobManager(max_workers=1, max_queued=2, retention_minutes=60)
 logging.basicConfig(level=settings.log_level)
 app = FastAPI(
     title="PHAGE-X API",
@@ -76,6 +80,17 @@ def readiness():
         "status": "ready",
         "isolates": len(data["isolates"]),
         "phages": len(data["phages"]),
+    }
+
+
+@app.get("/api/operations")
+def operations():
+    return {
+        "feature_jobs": novel_rank_jobs.stats(),
+        "worker_limit": 1,
+        "queue_limit": 2,
+        "retention_minutes": 60,
+        "durability": "in-process-research-runtime",
     }
 
 
@@ -265,6 +280,7 @@ def rank_novel_isolate(request: NovelIsolateRankRequest):
         model = get_research_model()
         distribution = model.distribution_check(features.embedding)
         candidates = model.rank_vector(features.embedding, request.limit)
+        cocktail = optimize_reviewed_cocktail(candidates, [], 3)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except RuntimeError as error:
@@ -280,11 +296,32 @@ def rank_novel_isolate(request: NovelIsolateRankRequest):
         distribution_status=distribution["status"],
         nearest_reference_cosine=distribution["nearest_reference_cosine"],
         candidates=candidates,
-        cocktail_status="blocked",
-        cocktail_blockers=[
-            "Phage genomic safety evidence has not been independently reviewed",
-            "Receptor and family diversity metadata are not present in the released runtime catalog",
-            "Novel-isolate predictions require laboratory confirmation",
-        ],
+        cocktail_status=cocktail.status,
+        cocktail_blockers=cocktail.blockers + ["Novel-isolate predictions require laboratory confirmation"],
         disclaimer="For laboratory validation only — novel-isolate research ranking, not treatment selection.",
     )
+
+
+@app.post("/api/jobs/novel-rank", response_model=JobResponse, status_code=202)
+def submit_novel_rank_job(request: NovelIsolateRankRequest):
+    try:
+        record = novel_rank_jobs.submit(lambda: rank_novel_isolate(request).model_dump())
+    except RuntimeError as error:
+        raise HTTPException(status_code=429, detail=str(error)) from error
+    return serialize_job(record)
+
+
+@app.get("/api/jobs/{job_id}", response_model=JobResponse)
+def get_novel_rank_job(job_id: str):
+    try:
+        return serialize_job(novel_rank_jobs.get(job_id))
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Job not found or expired") from error
+
+
+@app.post("/api/jobs/{job_id}/cancel", response_model=JobResponse)
+def cancel_novel_rank_job(job_id: str):
+    try:
+        return serialize_job(novel_rank_jobs.cancel(job_id))
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Job not found or expired") from error
