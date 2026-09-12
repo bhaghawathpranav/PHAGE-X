@@ -23,3 +23,7 @@ The web container serves static assets and proxies `/api` to the private API ser
 - Execute smoke tests, record image digests, and document rollback to the previous digest.
 
 This repository is deployment-ready, not authorization to publish or use the demo for clinical decisions.
+
+## State backup
+
+Run `PYTHONPATH=backend .venv/bin/python scripts/backup_state.py` to create a timestamped, transactionally consistent copy of the feedback, audit, and embedding-cache databases. The command immediately verifies SQLite integrity and SHA-256 digests. A restore remains an operator-controlled action: test it in an isolated directory before replacing live state.

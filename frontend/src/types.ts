@@ -61,6 +61,7 @@ export type ResearchRank = {
     compatibility: number;
     decision: string;
     safety_status: string;
+    rationale: string[];
   }[];
   cocktail_status: string;
   cocktail_blockers: string[];

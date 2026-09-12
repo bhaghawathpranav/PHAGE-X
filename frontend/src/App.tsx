@@ -176,7 +176,7 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
         {result.candidates.map((candidate, index) => (
           <div className="research-row" key={candidate.phage_id}>
             <span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
-            <em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
+            <em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")} · {candidate.safety_status.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
           </div>
         ))}
       </section>
@@ -193,7 +193,7 @@ function NovelResults({ result, onReset }: { result: NovelIsolateRank; onReset: 
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
+        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")} · {candidate.safety_status.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
       </section>
       <section className="limitations"><Info size={20} /><div><h3>Feature provenance</h3><p>{result.feature_source}</p><p>{result.distribution_status.replaceAll("-", " ")} · nearest reference cosine {result.nearest_reference_cosine.toFixed(3)}</p></div></section>
     </main>

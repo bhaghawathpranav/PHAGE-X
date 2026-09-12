@@ -62,7 +62,7 @@ To enable offline ESM-2 extraction, install `backend/requirements-embedding.txt`
 
 ## Production path
 
-The current repository includes CI, environment validation, health/readiness checks, security headers, production API-key enforcement, request throttling, metadata-only audit records, and a deployment runbook. Local development remains key-free. Production requires `PHAGEX_API_KEY` with at least 24 characters and accepts it in the `X-API-Key` header. It is not yet a scientifically validated production model. Follow the gated [production roadmap](docs/PRODUCTION_ROADMAP.md) and [deployment runbook](docs/DEPLOYMENT.md).
+The current repository includes CI, environment validation, health/readiness checks, security headers, production API-key enforcement, request throttling, metadata-only audit records, verified state backups, and a deployment runbook. Local development remains key-free. Production requires `PHAGEX_API_KEY` with at least 24 characters and accepts it in the `X-API-Key` header. It is not yet a scientifically validated production model. Follow the gated [production roadmap](docs/PRODUCTION_ROADMAP.md), [risk register](docs/RISK_REGISTER.md), and [deployment runbook](docs/DEPLOYMENT.md).
 
 ```bash
 docker compose up --build
