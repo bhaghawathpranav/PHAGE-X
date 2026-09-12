@@ -20,6 +20,7 @@ from .feature_providers import (
 from .inference import analyze, isolate_from_fasta
 from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
+from .security import ProductionSecurityMiddleware
 from .phage_catalog import validate_phage_catalog
 from .phage_screening import evidence_status, load_reviewed_metadata, registry_status
 from .research_model import get_research_model
@@ -60,7 +61,13 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-app.add_middleware(RequestContextMiddleware)
+app.add_middleware(RequestContextMiddleware, audit_db=settings.audit_db)
+app.add_middleware(
+    ProductionSecurityMiddleware,
+    production=settings.is_production,
+    api_key=settings.api_key,
+    requests_per_minute=settings.rate_limit_per_minute,
+)
 
 
 @app.get("/api/health")
