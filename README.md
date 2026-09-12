@@ -48,6 +48,8 @@ The dataset is deliberately synthetic-compatible: it supports a reproducible pro
 
 The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
+The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/BLAST+/ESM-2 capabilities without storing the sequence or falling back silently. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
+
 ## Production path
 
 The current repository includes production-shaped containers, CI, environment validation, health/readiness checks, security headers, and a deployment runbook. It is not yet a scientifically validated production model. Follow the gated [production roadmap](docs/PRODUCTION_ROADMAP.md) and [deployment runbook](docs/DEPLOYMENT.md).

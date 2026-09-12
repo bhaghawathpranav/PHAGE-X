@@ -62,3 +62,14 @@ def test_flags_ambiguous_sequence_for_review():
     response = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
     assert response.status_code == 200
     assert response.json()["sequence_qc"]["status"] == "review"
+
+
+def test_assembly_inspection_is_fail_closed_without_toolchain():
+    fasta = ">contig-one\n" + "ACGT" * 40 + "\n>contig-two\n" + "GGCC" * 30
+    response = client.post("/api/inspect-assembly", json={"fasta": fasta})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["contig_count"] == 2
+    assert result["sequence_persisted"] is False
+    assert result["pipeline_status"] in {"blocked", "ready-for-local-feature-extraction"}
+    assert "digest-provenance" in result["completed_stages"]

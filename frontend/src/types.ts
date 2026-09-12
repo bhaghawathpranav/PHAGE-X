@@ -66,3 +66,26 @@ export type ResearchRank = {
   cocktail_blockers: string[];
   disclaimer: string;
 };
+
+export type ProcessingCapabilities = {
+  novel_isolate_pipeline_ready: boolean;
+  tools: Record<string, boolean>;
+  blockers: string[];
+  esm2_model: string;
+  embedding_dimensions: number;
+};
+
+export type AssemblyInspection = {
+  assembly_sha256: string;
+  contig_count: number;
+  total_length_bp: number;
+  n50_bp: number;
+  gc_fraction: number;
+  ambiguous_fraction: number;
+  qc_status: string;
+  warnings: string[];
+  pipeline_status: string;
+  completed_stages: string[];
+  blockers: string[];
+  sequence_persisted: boolean;
+};

@@ -5,14 +5,18 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
+from .assembly import parse_assembly_fasta
 from .data import load_demo_data
 from .feedback import LabObservationStore
+from .feature_providers import capability_report
 from .inference import analyze, isolate_from_fasta
 from .observability import RequestContextMiddleware
 from .research_model import get_research_model
 from .schemas import (
     AnalysisResponse,
     AnalyzeRequest,
+    AssemblyInspectRequest,
+    AssemblyInspectResponse,
     IsolateSummary,
     LabObservationRequest,
     LabObservationResponse,
@@ -105,3 +109,34 @@ def research_rank(request: ResearchRankRequest):
         return get_research_model().rank(request.host_id, request.limit)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="Held-out research isolate not found") from error
+
+
+@app.get("/api/processing-capabilities")
+def processing_capabilities():
+    return capability_report()
+
+
+@app.post("/api/inspect-assembly", response_model=AssemblyInspectResponse)
+def inspect_assembly(request: AssemblyInspectRequest):
+    try:
+        _, qc = parse_assembly_fasta(request.fasta)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    capabilities = capability_report()
+    blockers = list(capabilities["blockers"])
+    if qc.status != "pass":
+        blockers.insert(0, "assembly_qc_review_required")
+    return AssemblyInspectResponse(
+        assembly_sha256=qc.assembly_sha256,
+        contig_count=qc.contig_count,
+        total_length_bp=qc.total_length_bp,
+        n50_bp=qc.n50_bp,
+        gc_fraction=qc.gc_fraction,
+        ambiguous_fraction=qc.ambiguous_fraction,
+        qc_status=qc.status,
+        warnings=qc.warnings,
+        pipeline_status="blocked" if blockers else "ready-for-local-feature-extraction",
+        completed_stages=["fasta-parse", "assembly-qc", "digest-provenance"],
+        blockers=blockers,
+        sequence_persisted=False,
+    )

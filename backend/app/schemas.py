@@ -121,3 +121,22 @@ class ResearchRankResponse(BaseModel):
     cocktail_status: str
     cocktail_blockers: List[str]
     disclaimer: str
+
+
+class AssemblyInspectRequest(BaseModel):
+    fasta: str = Field(min_length=100, max_length=15_000_000)
+
+
+class AssemblyInspectResponse(BaseModel):
+    assembly_sha256: str
+    contig_count: int
+    total_length_bp: int
+    n50_bp: int
+    gc_fraction: float
+    ambiguous_fraction: float
+    qc_status: str
+    warnings: List[str]
+    pipeline_status: str
+    completed_stages: List[str]
+    blockers: List[str]
+    sequence_persisted: bool

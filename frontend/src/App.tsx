@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, getIsolates, getResearchIsolates, rankResearchHost } from "./api";
-import type { Analysis, Isolate, RankedPhage, ResearchRank } from "./types";
+import { analyze, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
+import type { Analysis, AssemblyInspection, Isolate, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -190,6 +190,8 @@ export default function App() {
   const [mode, setMode] = useState<"demo" | "upload" | "research">("demo");
   const [researchIsolates, setResearchIsolates] = useState<string[]>([]);
   const [researchHost, setResearchHost] = useState("");
+  const [capabilities, setCapabilities] = useState<ProcessingCapabilities | null>(null);
+  const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
   const [fasta, setFasta] = useState(demoFasta);
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
@@ -200,6 +202,7 @@ export default function App() {
   useEffect(() => {
     getIsolates().then(setIsolates).catch((err) => setError(err.message));
     getResearchIsolates().then((items) => { setResearchIsolates(items); setResearchHost(items[0] || ""); }).catch((err) => setError(err.message));
+    getProcessingCapabilities().then(setCapabilities).catch(() => undefined);
   }, []);
 
   const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
@@ -281,6 +284,18 @@ export default function App() {
               </div>
               <textarea id="fasta" value={fasta} onChange={(event) => setFasta(event.target.value)} spellCheck={false} />
               <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
+              {capabilities && (
+                <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
+                  <strong>Real pipeline: {capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked locally"}</strong>
+                  <span>{capabilities.novel_isolate_pipeline_ready ? capabilities.esm2_model : `Missing: ${capabilities.blockers.join(", ")}`}</span>
+                </div>
+              )}
+              <button className="inspect-button" onClick={async () => {
+                setError("");
+                try { setInspection(await inspectAssembly(fasta)); }
+                catch (err) { setError(err instanceof Error ? err.message : "Inspection failed"); }
+              }}>Inspect real-pipeline readiness</button>
+              {inspection && <div className="inspection-result"><strong>Assembly QC: {inspection.qc_status}</strong><span>{inspection.contig_count} contig(s) · {inspection.total_length_bp.toLocaleString()} bp · N50 {inspection.n50_bp.toLocaleString()}</span><small>{inspection.sequence_persisted ? "Sequence stored" : "Sequence was not persisted"} · Pipeline {inspection.pipeline_status}</small></div>}
             </div>
           ) : (
             <div className="research-picker">

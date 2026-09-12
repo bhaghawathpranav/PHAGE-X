@@ -32,7 +32,7 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Exit gate:** Sequence QC, species confirmation, MLST/K-locus calling, receptor/RBP features, cached ESM-2 embeddings, provenance, deterministic processing, and failure handling pass on a reference set.
 
-**Status:** Real released ESM-2 embeddings are supported for model development. Upload QC checks record count, size, alphabet, ambiguous bases, GC fraction, length, and digest. Novel-isolate Kaptive/ESM-2 execution remains blocked from release; uploads still say placeholder explicitly.
+**Status:** Real released ESM-2 embeddings are supported for model development. Multi-contig upload QC checks size, alphabet, ambiguity, GC, total length, N50, and digest. Kaptive and ESM-2 providers, capability reporting, and a sequence-free vector cache are implemented and fail closed. K-locus protein extraction, species confirmation, installed toolchains, and reference-set validation remain blocking; demo uploads still say placeholder explicitly.
 
 ## M4 — Trained compatibility model
 

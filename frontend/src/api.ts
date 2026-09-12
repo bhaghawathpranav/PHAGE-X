@@ -1,4 +1,4 @@
-import type { Analysis, Isolate, ResearchRank } from "./types";
+import type { Analysis, AssemblyInspection, Isolate, ProcessingCapabilities, ResearchRank } from "./types";
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:8000");
 
@@ -39,6 +39,20 @@ export async function rankResearchHost(host_id: string): Promise<ResearchRank> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ host_id, limit: 20 }),
+    }),
+  );
+}
+
+export async function getProcessingCapabilities(): Promise<ProcessingCapabilities> {
+  return parse(await fetch(`${API}/api/processing-capabilities`));
+}
+
+export async function inspectAssembly(fasta: string): Promise<AssemblyInspection> {
+  return parse(
+    await fetch(`${API}/api/inspect-assembly`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fasta }),
     }),
   );
 }
