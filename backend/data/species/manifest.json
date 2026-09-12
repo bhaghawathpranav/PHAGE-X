@@ -1,0 +1,13 @@
+{
+  "reference_accession": "GCF_000240185.1",
+  "assembly_name": "ASM24018v2",
+  "organism": "Klebsiella pneumoniae subsp. pneumoniae HS11286",
+  "taxonomy_id": 1125630,
+  "source": "NCBI Datasets",
+  "source_url": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000240185.1/",
+  "downloaded_utc": "2026-09-12",
+  "uncompressed_sha256": "9528cd6940c58fae4b812a4af1a4c57f0db66f00b5ba3d60e0bb14609f423b8f",
+  "compressed_sha256": "83169368e337d4be0c25b8928181a491580330a2b2e8d6bda1494f458e3fb285",
+  "minimum_ani_percent": 95.0,
+  "minimum_alignment_fraction": 0.65
+}

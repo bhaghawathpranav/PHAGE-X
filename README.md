@@ -17,6 +17,7 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Separate real-model benchmark mode restricted to held-out PhageHostLearn isolates
 - Kaptive-backed KL reference-protein extraction and a cached ESM-2 feature interface
 - Fail-closed isolate-derived K-locus protein extraction with ephemeral sequence handling
+- Offline fastANI species confirmation against a checksum-pinned NCBI RefSeq genome
 
 ## Run locally
 
@@ -50,7 +51,7 @@ The dataset is deliberately synthetic-compatible: it supports a reproducible pro
 
 The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
-The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/ESM-2 capabilities without storing the sequence or falling back silently. The API can extract validated isolate-derived K-locus proteins and hand them to the cached ESM-2 interface, but scoring remains blocked until species confirmation and ESM-2 validation pass. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
+The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. The API confirms species by ANI before extracting validated isolate-derived K-locus proteins, but scoring remains blocked until ESM-2 and broader reference-panel validation pass. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
 
 ## Production path
 

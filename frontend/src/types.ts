@@ -104,6 +104,11 @@ export type IsolateLocusExtraction = {
   problems: string;
   kaptive_version: string;
   species_status: string;
+  species_reference_accession: string;
+  species_ani_percent: number;
+  species_alignment_fraction: number;
+  species_reference_sha256: string;
+  fastani_version: string;
   pipeline_status: string;
   raw_sequences_returned: boolean;
   sequence_persisted: boolean;

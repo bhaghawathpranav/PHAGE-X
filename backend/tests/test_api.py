@@ -3,6 +3,7 @@ import importlib
 
 from app.main import app
 from app.feature_providers import IsolateLocusProteinSet
+from app.species import SpeciesConfirmation
 
 
 client = TestClient(app)
@@ -107,14 +108,31 @@ def test_isolate_locus_endpoint_returns_only_provenance_metadata(monkeypatch):
                 kaptive_version="3.2.0",
             )
 
+    class SpeciesRunner:
+        def confirm_klebsiella_pneumoniae(self, fasta):
+            return SpeciesConfirmation(
+                organism="Klebsiella pneumoniae",
+                reference_accession="GCF_000240185.1",
+                ani_percent=99.2,
+                alignment_fraction=0.98,
+                mapped_fragments=100,
+                total_fragments=102,
+                status="confirmed-reference-ani",
+                reference_sha256="b" * 64,
+                fastani_version="version 1.33",
+            )
+
     monkeypatch.setattr(main_module, "KaptiveRunner", Runner)
+    monkeypatch.setattr(main_module, "FastANIRunner", SpeciesRunner)
     fasta = ">chromosome\n" + "ACGT" * 1_000_000
     response = client.post("/api/extract-isolate-locus", json={"fasta": fasta})
     assert response.status_code == 200
     result = response.json()
     assert result["locus"] == "KL107"
     assert result["protein_count"] == 2
-    assert result["species_status"] == "unconfirmed"
+    assert result["species_status"] == "confirmed-reference-ani"
+    assert result["species_ani_percent"] == 99.2
+    assert result["species_reference_accession"] == "GCF_000240185.1"
     assert result["pipeline_status"].startswith("blocked")
     assert result["raw_sequences_returned"] is False
     assert result["sequence_persisted"] is False

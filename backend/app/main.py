@@ -12,6 +12,7 @@ from .feature_providers import KaptiveRunner, capability_report
 from .inference import analyze, isolate_from_fasta
 from .observability import RequestContextMiddleware
 from .research_model import get_research_model
+from .species import FastANIRunner
 from .schemas import (
     AnalysisResponse,
     AnalyzeRequest,
@@ -175,6 +176,7 @@ def extract_isolate_locus(request: IsolateLocusRequest):
         _, qc = parse_assembly_fasta(request.fasta)
         if qc.status != "pass":
             raise ValueError("Assembly QC requires review before K-locus extraction")
+        species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
         proteins = KaptiveRunner().type_and_extract_assembly(request.fasta)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -193,8 +195,13 @@ def extract_isolate_locus(request: IsolateLocusRequest):
         missing_genes=proteins.missing_genes,
         problems=proteins.problems,
         kaptive_version=proteins.kaptive_version,
-        species_status="unconfirmed",
-        pipeline_status="blocked-pending-species-confirmation-and-esm2",
+        species_status=species.status,
+        species_reference_accession=species.reference_accession,
+        species_ani_percent=species.ani_percent,
+        species_alignment_fraction=species.alignment_fraction,
+        species_reference_sha256=species.reference_sha256,
+        fastani_version=species.fastani_version,
+        pipeline_status="blocked-pending-esm2",
         raw_sequences_returned=False,
         sequence_persisted=False,
         disclaimer="Isolate-derived research features for laboratory validation only; not a susceptibility or treatment result.",

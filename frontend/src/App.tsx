@@ -304,7 +304,7 @@ export default function App() {
                   catch (err) { setError(err instanceof Error ? err.message : "K-locus extraction failed"); }
                 }}>Extract isolate K-locus proteins</button>
               )}
-              {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} validated proteins · {locusExtraction.percent_identity.toFixed(1)}% identity · {locusExtraction.percent_coverage.toFixed(1)}% coverage</span><small>Species {locusExtraction.species_status} · Scoring remains {locusExtraction.pipeline_status.replaceAll("-", " ")}</small></div>}
+              {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} validated proteins · {locusExtraction.percent_identity.toFixed(1)}% identity · {locusExtraction.percent_coverage.toFixed(1)}% coverage</span><small>Species confirmed at {locusExtraction.species_ani_percent.toFixed(2)}% ANI ({Math.round(locusExtraction.species_alignment_fraction * 100)}% aligned) · Scoring remains {locusExtraction.pipeline_status.replaceAll("-", " ")}</small></div>}
             </div>
           ) : (
             <div className="research-picker">

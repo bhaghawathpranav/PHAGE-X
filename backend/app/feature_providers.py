@@ -15,6 +15,8 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
+from .species import fastani_available
+
 
 ESM2_MODEL = "esm2_t33_650M_UR50D"
 
@@ -75,6 +77,7 @@ def capability_report() -> Dict[str, object]:
         "kaptive": find_executable("kaptive"),
         "blastn": find_executable("blastn"),
         "minimap2": find_executable("minimap2"),
+        "fastani": fastani_available(),
         "torch": importlib.util.find_spec("torch") is not None,
         "esm": importlib.util.find_spec("esm") is not None,
     }

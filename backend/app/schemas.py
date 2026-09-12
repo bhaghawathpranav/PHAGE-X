@@ -174,6 +174,11 @@ class IsolateLocusResponse(BaseModel):
     problems: str
     kaptive_version: str
     species_status: str
+    species_reference_accession: str
+    species_ani_percent: float
+    species_alignment_fraction: float
+    species_reference_sha256: str
+    fastani_version: str
     pipeline_status: str
     raw_sequences_returned: bool
     sequence_persisted: bool

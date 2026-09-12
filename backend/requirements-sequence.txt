@@ -1,5 +1,6 @@
 -r requirements.txt
 # Kaptive assembly typing requires minimap2 to be installed separately on the host.
+# Species confirmation requires fastANI; both binaries are reported by the capability endpoint.
 kaptive==3.2.0
 # ESM-2 runtime is platform-specific and intentionally installed separately:
 # fair-esm==2.0.0

@@ -15,6 +15,8 @@
 11. Isolate-specific Kaptive assembly typing and translated protein extraction
 12. Strict rejection of untypeable, missing, partial, truncated, duplicate, or low-coverage locus genes
 13. Ephemeral sequence handling with metadata-only API responses
+14. Checksum-pinned offline fastANI confirmation against NCBI RefSeq `GCF_000240185.1`
+15. Fail-closed 95% ANI and 65% aligned-fragment gates before K-locus extraction
 
 ## Current blocking boundary
 
@@ -22,13 +24,15 @@ The canonical reference-locus bridge is implemented: for a strict locus identifi
 
 The uploaded-isolate bridge is now implemented through Kaptive's assembly JSON output. PHAGE-X accepts only a `Typeable` call with no reported locus problems or missing genes, then validates every isolate-derived protein for completeness, translation coverage, uniqueness, amino-acid alphabet, and the ESM-2 length contract. The uploaded assembly and Kaptive's sequence-bearing JSON live only in a temporary directory; the API returns provenance and summary metadata, not sequences.
 
-This still does not establish organism identity or phage susceptibility. The extraction endpoint returns `species_status: unconfirmed` and remains blocked before scoring pending species confirmation, local ESM-2 execution, and reference-set parity validation. PHAGE-X does not substitute whole-genome DNA or arbitrary translated frames for K-locus proteins.
+Species confirmation now runs before K-locus extraction. The extraction endpoint reports the reference accession, ANI, aligned fraction, reference digest, and fastANI version. A checksum-pinned complete HS11286 genome confirms at 100% ANI and 99.84% aligned fragments; an unrelated genome-sized sequence is rejected.
 
-The development environment has Kaptive 3.2, minimap2 2.31, and BLAST+ 2.17 installed. PyTorch and `fair-esm` remain unavailable, so `GET /api/processing-capabilities` reports those exact blockers. `POST /api/inspect-assembly` does not silently fall back to the demo hash representation.
+One reference and a conventional ANI cutoff are not sufficient validation across the full _K. pneumoniae_ species complex. A curated multi-reference panel, near-neighbor rejection set, contaminated/mixed assembly tests, and taxonomic expert review remain required. This gate establishes software evidence only and does not establish phage susceptibility.
+
+The development environment has Kaptive 3.2, minimap2 2.31, fastANI 1.33, and BLAST+ 2.17 installed. PyTorch and `fair-esm` remain unavailable, so `GET /api/processing-capabilities` reports those exact blockers. `POST /api/inspect-assembly` does not silently fall back to the demo hash representation.
 
 ## Installation boundary
 
-Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while minimap2 must be provided by the execution environment for assembly typing. BLAST+ remains part of the planned broader sequence-analysis environment. PyTorch is platform-specific; install the appropriate CPU/CUDA build and `fair-esm==2.0.0` in a dedicated feature-extraction environment. The 650M ESM-2 weights are large and should be checksum-pinned and cached by deployment infrastructure rather than downloaded during an API request.
+Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while minimap2 and fastANI must be provided by the execution environment. BLAST+ remains part of the planned broader sequence-analysis environment. PyTorch is platform-specific; install the appropriate CPU/CUDA build and `fair-esm==2.0.0` in a dedicated feature-extraction environment. The 650M ESM-2 weights are large and should be checksum-pinned and cached by deployment infrastructure rather than downloaded during an API request.
 
 ## Required validation
 
@@ -39,4 +43,4 @@ Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while minimap2 mus
 - CPU/GPU parity tolerance
 - Cache concurrency and corruption tests
 - Resource limits, job queue, cancellation, and timeouts
-- Species confirmation before K-locus interpretation
+- Curated multi-reference species panel and near-neighbor validation
