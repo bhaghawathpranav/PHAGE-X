@@ -1,0 +1,265 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  CircleDot,
+  Dna,
+  FlaskConical,
+  Info,
+  Layers3,
+  LoaderCircle,
+  Microscope,
+  Network,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+} from "lucide-react";
+import { analyze, getIsolates } from "./api";
+import type { Analysis, Isolate, RankedPhage } from "./types";
+
+const demoFasta = `>KPN-demo-upload
+ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
+
+function ScoreRing({ value, size = 74 }: { value: number; size?: number }) {
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - value);
+  return (
+    <div className="score-ring" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 68 68" aria-hidden="true">
+        <circle className="score-track" cx="34" cy="34" r={radius} />
+        <circle
+          className="score-progress"
+          cx="34"
+          cy="34"
+          r={radius}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <strong>{Math.round(value * 100)}</strong>
+    </div>
+  );
+}
+
+function PhageRow({ phage, rank }: { phage: RankedPhage; rank: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`phage-row ${open ? "open" : ""}`}>
+      <button className="phage-summary" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="rank">{String(rank).padStart(2, "0")}</span>
+        <span className="phage-identity">
+          <strong>{phage.name}</strong>
+          <small>{phage.family} · {phage.receptor}</small>
+        </span>
+        <span className={`band ${phage.confidence_band}`}>{phage.confidence_band}</span>
+        <span className="mini-score">{Math.round(phage.compatibility * 100)}%</span>
+        <ChevronDown size={17} className="chevron" />
+      </button>
+      {open && (
+        <div className="phage-details">
+          <div>
+            <h4>Why it ranked here</h4>
+            {phage.rationale.map((item) => <p key={item}><Check size={14} />{item}</p>)}
+            <p><AlertTriangle size={14} />Safety screen: {phage.safety_status}</p>
+          </div>
+          <div>
+            <h4>Model contributions</h4>
+            {phage.contributions.map((item) => (
+              <div className="contribution" key={item.label}>
+                <span>{item.label}</span><i style={{ width: `${Math.min(item.value / 2.4, 1) * 100}%` }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Results({ result, onReset }: { result: Analysis; onReset: () => void }) {
+  return (
+    <main className="results page-shell">
+      <div className="results-head">
+        <div>
+          <span className="eyebrow"><Sparkles size={14} /> analysis complete</span>
+          <h1>Candidate landscape for <em>{result.isolate.name}</em></h1>
+          <p>{result.isolate.organism} · {result.isolate.sequence_type} · {result.isolate.k_locus}</p>
+        </div>
+        <button className="ghost-button" onClick={onReset}>New analysis</button>
+      </div>
+
+      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
+
+      <section className="result-grid">
+        <article className="panel cocktail-card">
+          <div className="panel-heading">
+            <div><span className="step-label">PRIMARY OUTPUT</span><h2>Complementary cocktail</h2></div>
+            <ScoreRing value={result.cocktail.objective_score} />
+          </div>
+          <div className="cocktail-map">
+            {result.cocktail.members.map((member, index) => (
+              <div className="member-wrap" key={member.phage_id}>
+                <div className="phage-orb"><Dna size={22} /><span>P{index + 1}</span></div>
+                {index < result.cocktail.members.length - 1 && <span className="connector">+</span>}
+                <strong>{member.name}</strong><small>{member.role}</small>
+              </div>
+            ))}
+          </div>
+          <div className="metric-row">
+            <div><span>Compatibility</span><strong>{Math.round(result.cocktail.compatibility * 100)}%</strong></div>
+            <div><span>Diversity</span><strong>{Math.round(result.cocktail.diversity * 100)}%</strong></div>
+            <div><span>Redundancy</span><strong>{Math.round(result.cocktail.redundancy * 100)}%</strong></div>
+          </div>
+          <p className="method-note"><Info size={15} /> Objective = compatibility + diversity − redundancy. This is a ranking heuristic, not a treatment recommendation.</p>
+        </article>
+
+        <aside className="panel isolate-card">
+          <span className="step-label">ISOLATE PROFILE</span>
+          <h3>{result.isolate.name}</h3>
+          <div className="profile-line"><span>Organism</span><strong>{result.isolate.organism}</strong></div>
+          <div className="profile-line"><span>Sequence type</span><strong>{result.isolate.sequence_type}</strong></div>
+          <div className="profile-line"><span>K locus</span><strong>{result.isolate.k_locus}</strong></div>
+          <span className="profile-label">Resistance markers</span>
+          <div className="tag-list">{result.isolate.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div>
+          <div className="model-chip"><CircleDot size={14} />{result.model}</div>
+          {result.sequence_qc && (
+            <div className="qc-card">
+              <strong>Sequence QC: {result.sequence_qc.status}</strong>
+              <span>{result.sequence_qc.length_bp.toLocaleString()} bp · {Math.round(result.sequence_qc.gc_fraction * 100)}% GC</span>
+              <small>Feature source: {result.feature_source}</small>
+            </div>
+          )}
+        </aside>
+      </section>
+
+      <section className="panel ranking-panel">
+        <div className="panel-heading compact">
+          <div><span className="step-label">EXPLAINABLE RANKING</span><h2>Candidate phages</h2></div>
+          <span className="catalog-count">{result.ranked_phages.length} lytic candidates</span>
+        </div>
+        <div className="ranking-head"><span>Rank</span><span>Candidate</span><span>Band</span><span>Score</span><span /></div>
+        {result.ranked_phages.map((phage, index) => <PhageRow phage={phage} rank={index + 1} key={phage.id} />)}
+      </section>
+
+      <section className="limitations">
+        <AlertTriangle size={20} />
+        <div><h3>Read before interpreting</h3>{result.limitations.map((item) => <p key={item}>{item}</p>)}</div>
+      </section>
+    </main>
+  );
+}
+
+export default function App() {
+  const [isolates, setIsolates] = useState<Isolate[]>([]);
+  const [selected, setSelected] = useState("kp-mdr-001");
+  const [mode, setMode] = useState<"demo" | "upload">("demo");
+  const [fasta, setFasta] = useState(demoFasta);
+  const [size, setSize] = useState(3);
+  const [result, setResult] = useState<Analysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getIsolates().then(setIsolates).catch((err) => setError(err.message));
+  }, []);
+
+  const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
+
+  async function run() {
+    setLoading(true);
+    setError("");
+    try {
+      const next = await analyze(mode === "demo"
+        ? { isolate_id: selected, cocktail_size: size }
+        : { fasta, isolate_name: "Uploaded KPN isolate", cocktail_size: size });
+      setResult(next);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Analysis failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (result) return <><Header /><Results result={result} onReset={() => setResult(null)} /></>;
+
+  return (
+    <div className="app">
+      <Header />
+      <main className="page-shell hero-layout">
+        <section className="hero-copy">
+          <span className="eyebrow"><span className="live-dot" /> OFFLINE RESEARCH PROTOTYPE</span>
+          <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
+          <p className="lead">An explainable screening workspace for ranking phage–host compatibility and assembling diverse cocktail candidates.</p>
+          <div className="flow-strip">
+            <div><Microscope /><span>Isolate</span></div><ArrowRight />
+            <div><Network /><span>Embedding</span></div><ArrowRight />
+            <div><Layers3 /><span>Ranking</span></div><ArrowRight />
+            <div><FlaskConical /><span>Validate</span></div>
+          </div>
+          <div className="guardrail"><ShieldCheck size={18} /><div><strong>Research use only</strong><span>All outputs require independent laboratory validation.</span></div></div>
+        </section>
+
+        <section className="input-panel panel">
+          <div className="panel-top"><span>01</span><div><h2>Choose an isolate</h2><p>Start with a demo case or supply a FASTA sequence.</p></div></div>
+          <div className="tabs">
+            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Demo cases</button>
+            <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Upload FASTA</button>
+          </div>
+
+          {mode === "demo" ? (
+            <div className="case-list">
+              {isolates.map((isolate) => (
+                <button key={isolate.id} className={`case-option ${selected === isolate.id ? "selected" : ""}`} onClick={() => setSelected(isolate.id)}>
+                  <span className="radio"><i /></span>
+                  <span><strong>{isolate.name}</strong><small>{isolate.sequence_type} · {isolate.k_locus}</small></span>
+                  {isolate.id === "kp-mdr-001" && <em>Featured</em>}
+                </button>
+              ))}
+              {active && <div className="case-detail"><p>{active.description}</p><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div></div>}
+            </div>
+          ) : (
+            <div className="upload-area">
+              <div className="upload-label-row">
+                <label htmlFor="fasta">FASTA sequence</label>
+                <label className="file-control">
+                  <Upload size={12} /> Choose .fasta
+                  <input
+                    type="file"
+                    accept=".fasta,.fa,.fna,text/plain"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (file) setFasta(await file.text());
+                    }}
+                  />
+                </label>
+              </div>
+              <textarea id="fasta" value={fasta} onChange={(event) => setFasta(event.target.value)} spellCheck={false} />
+              <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
+            </div>
+          )}
+
+          <div className="size-picker"><span>Cocktail size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>
+          {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
+          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active)}>
+            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>Run candidate discovery <ArrowRight size={18} /></>}
+          </button>
+          <p className="privacy"><ShieldCheck size={13} /> Runs locally. No external APIs or sequence uploads.</p>
+        </section>
+      </main>
+      <footer><span>PHAGE-X / 24H MVP</span><span>AI-guided · Explainable · Lab-gated</span></footer>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header>
+      <div className="brand-mark"><Dna size={20} /><strong>PHAGE<span>—X</span></strong></div>
+      <div className="header-meta"><span>K. pneumoniae</span><i /><span>v0.1</span></div>
+    </header>
+  );
+}

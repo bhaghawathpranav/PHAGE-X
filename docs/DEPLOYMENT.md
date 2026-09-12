@@ -1,0 +1,23 @@
+# Deployment runbook
+
+## Local production-shaped deployment
+
+1. Copy `.env.example` to `.env` and set the public origin when it differs from localhost.
+2. Run `docker compose up --build -d`.
+3. Check `http://localhost:8080/healthz` and `http://localhost:8080/api/ready`.
+4. Open `http://localhost:8080` and complete both the preloaded and FASTA demo flows.
+5. Stop with `docker compose down`.
+
+The web container serves static assets and proxies `/api` to the private API service. The API is not published directly by Compose.
+
+## Before any public environment
+
+- Choose an accountable owner, hosting provider, region, domain, and budget.
+- Terminate TLS at the platform load balancer and set `PHAGEX_ALLOWED_ORIGINS` to the exact HTTPS origin.
+- Store configuration in the platform secret/config service; do not commit `.env`.
+- Enable platform access logs, service metrics, alerts, container scanning, backups, and cost limits.
+- Keep the deployment access-controlled until data provenance, security/privacy, and prospective validation milestones pass.
+- Execute smoke tests, record image digests, and document rollback to the previous digest.
+
+This repository is deployment-ready, not authorization to publish or use the demo for clinical decisions.
+

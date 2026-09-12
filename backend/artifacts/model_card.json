@@ -1,0 +1,161 @@
+{
+  "artifact_version": "phagex-hgb-0.1.0",
+  "created_at": "2026-09-12T05:56:35.766130+00:00",
+  "research_only": true,
+  "dataset_doi": "10.5281/zenodo.11061100",
+  "source_sha256": {
+    "phage_host_interactions.csv": "b9d8822ca73de87036bfe46c05db5e8efc1a31804a7ea07915cf1503d9d8c8c1",
+    "esm2_embeddings_loci.csv": "e448936b34755bea473978710cd39c046fd8174381029e0ca8c455226c549e59",
+    "esm2_embeddings_rbp.csv": "c282a434f92b6702d54baa821adcdb563070020e9b9fe29a045a1515e53bc990",
+    "esm2_embeddings_loci_invitro.csv": "62d9b27eb3f36c8e0af77e0f39d512178863ef73c274dda54954bcd4de622e96"
+  },
+  "feature_names": [
+    "cosine_similarity",
+    "euclidean_distance",
+    "absolute_difference_mean",
+    "absolute_difference_std",
+    "absolute_difference_max",
+    "element_product_mean",
+    "element_product_std",
+    "element_product_max",
+    "host_embedding_norm",
+    "phage_embedding_norm",
+    "rbp_count"
+  ],
+  "split_policy": "host-disjoint 70/15/15 grouped split, seed 41",
+  "counts": {
+    "pairs": 10006,
+    "positives": 333,
+    "hosts": 200,
+    "phages": 105,
+    "train_pairs": 6979,
+    "validation_pairs": 1543,
+    "test_pairs": 1484
+  },
+  "metrics": {
+    "roc_auc": 0.9055100974930361,
+    "average_precision": 0.353743773724399,
+    "brier_score": 0.02556118173102306,
+    "top_3_host_recall": 0.7894736842105263,
+    "top_5_host_recall": 0.8947368421052632
+  },
+  "repeated_host_holdout": {
+    "repeats": 5,
+    "seeds": [
+      100,
+      101,
+      102,
+      103,
+      104
+    ],
+    "summary": {
+      "roc_auc": {
+        "mean": 0.7546160084665576,
+        "std": 0.05542207848522265,
+        "min": 0.6801843592030925,
+        "max": 0.8261718087092285
+      },
+      "average_precision": {
+        "mean": 0.27653461303251153,
+        "std": 0.06141650373914363,
+        "min": 0.18992033140659886,
+        "max": 0.36797514823634
+      },
+      "brier_score": {
+        "mean": 0.030562439492509936,
+        "std": 0.0038078249704434105,
+        "min": 0.026204926408914923,
+        "max": 0.03518243649931014
+      },
+      "top_3_host_recall": {
+        "mean": 0.679175210754158,
+        "std": 0.04685030100759326,
+        "min": 0.631578947368421,
+        "max": 0.7619047619047619
+      },
+      "top_5_host_recall": {
+        "mean": 0.7188425609478241,
+        "std": 0.049976113417281184,
+        "min": 0.6818181818181818,
+        "max": 0.8095238095238095
+      }
+    }
+  },
+  "release_decision": {
+    "approved": false,
+    "reason": "External validation, genomic safety evidence, and independent review are not complete."
+  },
+  "model": "sklearn.HistGradientBoostingClassifier",
+  "feature_importance": [
+    {
+      "feature": "absolute_difference_mean",
+      "mean": 0.17558706753281994,
+      "std": 0.019109969740435166
+    },
+    {
+      "feature": "element_product_mean",
+      "mean": 0.13929696039526435,
+      "std": 0.01888349872956337
+    },
+    {
+      "feature": "element_product_max",
+      "mean": 0.08217824015188965,
+      "std": 0.015569344719739102
+    },
+    {
+      "feature": "host_embedding_norm",
+      "mean": 0.06685075756899411,
+      "std": 0.028235814154506704
+    },
+    {
+      "feature": "absolute_difference_max",
+      "mean": 0.0661557154568897,
+      "std": 0.026574475832533098
+    },
+    {
+      "feature": "euclidean_distance",
+      "mean": 0.062125837757017785,
+      "std": 0.009378978991530916
+    },
+    {
+      "feature": "cosine_similarity",
+      "mean": 0.05618371536780571,
+      "std": 0.019299602552996488
+    },
+    {
+      "feature": "phage_embedding_norm",
+      "mean": 0.041980276390216974,
+      "std": 0.02366293048115994
+    },
+    {
+      "feature": "absolute_difference_std",
+      "mean": 0.03255233282275388,
+      "std": 0.013606677093226117
+    },
+    {
+      "feature": "rbp_count",
+      "mean": 0.011356609819947079,
+      "std": 0.019057509916352557
+    },
+    {
+      "feature": "element_product_std",
+      "mean": -0.004760041885319331,
+      "std": 0.011933064345323026
+    }
+  ],
+  "abstention": {
+    "rule": "abstain when calibrated probability is between 0.35 and 0.65",
+    "test_fraction": 0.0033692722371967657
+  },
+  "runtime": {
+    "python": "3.9.6",
+    "numpy": "2.0.2",
+    "scikit_learn": "1.6.1"
+  },
+  "limitations": [
+    "Unobserved pairs are study labels and may include unknown rather than confirmed-negative interactions.",
+    "Metrics from a single deterministic split are insufficient for scientific release.",
+    "The compact pair features do not reproduce the complete published multi-instance architecture.",
+    "No clinical or laboratory-use claim is supported by this artifact."
+  ]
+}

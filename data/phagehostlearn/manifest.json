@@ -1,0 +1,42 @@
+{
+  "dataset_id": "phagehostlearn-zenodo-11061100",
+  "version": "2024-04-24",
+  "title": "PhageHostLearn - training and test data",
+  "source": "https://zenodo.org/records/11061100",
+  "doi": "10.5281/zenodo.11061100",
+  "license": "CC-BY-4.0",
+  "organism_scope": "Klebsiella spp., primarily Klebsiella pneumoniae",
+  "citation": "Boeckaerts et al., Prediction of Klebsiella phage-host specificity at the strain level, Nature Communications (2024)",
+  "intended_use": "Research-only Klebsiella phage-host compatibility model development and evaluation.",
+  "limitations": [
+    "Interaction labels are sparse and study-specific.",
+    "An unobserved interaction must not automatically be treated as a confirmed biological negative.",
+    "The dataset does not establish treatment efficacy, dosing, or clinical safety."
+  ],
+  "files": [
+    {
+      "name": "phage_host_interactions.csv",
+      "bytes": 70303,
+      "md5": "e4f7f15779f698f3b0f76164c9d44f22",
+      "url": "https://zenodo.org/api/records/11061100/files/phage_host_interactions.csv/content"
+    },
+    {
+      "name": "esm2_embeddings_loci.csv",
+      "bytes": 3123617,
+      "md5": "f13af74b8ebad5c42cbde3c1552abb89",
+      "url": "https://zenodo.org/api/records/11061100/files/esm2_embeddings_loci.csv/content"
+    },
+    {
+      "name": "esm2_embeddings_rbp.csv",
+      "bytes": 6815459,
+      "md5": "f70e85f6bd94bb5687f2aeb938b60b19",
+      "url": "https://zenodo.org/api/records/11061100/files/esm2_embeddings_rbp.csv/content"
+    },
+    {
+      "name": "esm2_embeddings_loci_invitro.csv",
+      "bytes": 472791,
+      "md5": "3577e7fb876a12e8078866a47cbbc7dd",
+      "url": "https://zenodo.org/api/records/11061100/files/esm2_embeddings_loci_invitro.csv/content"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "created_at": "2026-09-12T05:56:35.798936+00:00",
+  "research_only": true,
+  "artifacts": {
+    "model.joblib": "a93edbdbfdb7879a05d8be5138b84d7c67f6729753dac5fd98054953338462fa",
+    "model_card.json": "d6225194732f7b0f485f727ba5b9f2c60df8dae947b3f9307a63eb80409534f1"
+  }
+}

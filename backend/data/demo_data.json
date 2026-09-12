@@ -1,0 +1,64 @@
+{
+  "isolates": [
+    {
+      "id": "kp-mdr-001",
+      "name": "KPN-HX01",
+      "organism": "Klebsiella pneumoniae",
+      "sequence_type": "ST258",
+      "k_locus": "KL107",
+      "receptor": "K107 capsule",
+      "resistance": ["carbapenem", "cephalosporin", "fluoroquinolone"],
+      "description": "Preloaded multidrug-resistant demo case with a KPC-like resistance profile.",
+      "embedding": [0.71, -0.18, 0.56, 0.22, -0.41, 0.65, 0.08, -0.27]
+    },
+    {
+      "id": "kp-mdr-002",
+      "name": "KPN-NDM07",
+      "organism": "Klebsiella pneumoniae",
+      "sequence_type": "ST147",
+      "k_locus": "KL64",
+      "receptor": "K64 capsule",
+      "resistance": ["carbapenem", "aminoglycoside", "trimethoprim-sulfamethoxazole"],
+      "description": "Synthetic-compatible NDM-profile demo isolate for offline comparison.",
+      "embedding": [0.33, 0.52, -0.21, 0.73, 0.18, -0.46, 0.59, 0.11]
+    }
+  ],
+  "phages": [
+    {
+      "id": "px-kp-101", "name": "Kleo vB_KpnP-X1", "family": "Autographiviridae", "receptor": "K107 capsule",
+      "embedding": [0.68, -0.14, 0.59, 0.18, -0.36, 0.61, 0.13, -0.22], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["ST258", "KL107", "KPC"], "evidence_quality": 0.92,
+      "evidence": "Curated synthetic demo record modeled on public host-range metadata."
+    },
+    {
+      "id": "px-kp-203", "name": "Capsid K64-Delta", "family": "Straboviridae", "receptor": "K64 capsule",
+      "embedding": [0.38, 0.48, -0.17, 0.69, 0.24, -0.39, 0.54, 0.08], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["ST147", "KL64", "NDM"], "evidence_quality": 0.88,
+      "evidence": "Curated synthetic demo record modeled on public host-range metadata."
+    },
+    {
+      "id": "px-kp-144", "name": "Kappa Broad-14", "family": "Drexlerviridae", "receptor": "outer membrane protein",
+      "embedding": [0.53, -0.03, 0.46, 0.34, -0.26, 0.43, 0.29, -0.31], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["ST258", "ST147", "broad-host"], "evidence_quality": 0.81,
+      "evidence": "Curated synthetic broad-host demo record; laboratory range not established."
+    },
+    {
+      "id": "px-kp-087", "name": "Podora KPN-87", "family": "Schitoviridae", "receptor": "K107 capsule",
+      "embedding": [0.58, -0.31, 0.38, 0.07, -0.48, 0.51, -0.04, -0.11], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["KL107", "capsule"], "evidence_quality": 0.79,
+      "evidence": "Synthetic demo record with capsule-targeting annotation."
+    },
+    {
+      "id": "px-kp-311", "name": "Myra KPN-311", "family": "Myoviridae-like", "receptor": "LPS",
+      "embedding": [0.42, -0.22, 0.31, 0.44, -0.19, 0.35, 0.21, -0.42], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["LPS", "ST258"], "evidence_quality": 0.76,
+      "evidence": "Synthetic demo record intended to illustrate receptor diversity."
+    },
+    {
+      "id": "px-kp-052", "name": "Velo KPN-52", "family": "Autographiviridae", "receptor": "K2 capsule",
+      "embedding": [0.14, 0.23, 0.19, -0.08, 0.36, 0.11, -0.45, 0.51], "strictly_lytic": true,
+      "host_evidence": ["Klebsiella pneumoniae"], "host_range_tags": ["KL2", "capsule"], "evidence_quality": 0.69,
+      "evidence": "Synthetic lower-match control record."
+    }
+  ]
+}
