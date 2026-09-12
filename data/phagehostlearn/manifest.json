@@ -37,6 +37,18 @@
       "bytes": 472791,
       "md5": "3577e7fb876a12e8078866a47cbbc7dd",
       "url": "https://zenodo.org/api/records/11061100/files/esm2_embeddings_loci_invitro.csv/content"
+    },
+    {
+      "name": "phages_genomes.zip",
+      "bytes": 1785630,
+      "md5": "f43159fd3473e2d22a56fec27e8d443c",
+      "url": "https://zenodo.org/api/records/11061100/files/phages_genomes.zip/content"
+    },
+    {
+      "name": "RBPbase.csv",
+      "bytes": 775261,
+      "md5": "fc235f3acfcd4dcadb71527bdf6704a3",
+      "url": "https://zenodo.org/api/records/11061100/files/RBPbase.csv/content"
     }
   ]
 }

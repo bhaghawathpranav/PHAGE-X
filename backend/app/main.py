@@ -20,6 +20,7 @@ from .feature_providers import (
 from .inference import analyze, isolate_from_fasta
 from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
+from .phage_catalog import validate_phage_catalog
 from .research_model import get_research_model
 from .real_cocktail import optimize_reviewed_cocktail
 from .species import FastANIRunner
@@ -76,6 +77,10 @@ def readiness():
     data = load_demo_data()
     if not data.get("isolates") or not data.get("phages"):
         raise HTTPException(status_code=503, detail="Demo catalog is unavailable")
+    try:
+        validate_phage_catalog()
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail="Real phage catalog failed integrity validation") from error
     return {
         "status": "ready",
         "isolates": len(data["isolates"]),
@@ -126,6 +131,11 @@ def record_lab_observation(request: LabObservationRequest):
 @app.get("/api/research-model")
 def research_model_status():
     return get_research_model().status()
+
+
+@app.get("/api/phage-catalog")
+def phage_catalog_status():
+    return validate_phage_catalog()
 
 
 @app.get("/api/research-isolates", response_model=list[str])

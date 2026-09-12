@@ -26,6 +26,8 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Status:** Core pipeline implemented against checksum-pinned PhageHostLearn data with license/citation metadata, ID alignment, 1,280-dimension schema validation, and host-disjoint splits. Independent label review and a second external dataset remain.
 
+The offline runtime now also contains the authors' raw genome archive for all 105 phages and `RBPbase.csv` with 274 detected receptor-binding proteins. Zenodo MD5 values and local SHA-256 digests are pinned, archive/RBP identifiers are cross-validated, and the API exposes only counts and provenance—not raw sequences.
+
 ## M3 — Real sequence and embedding pipeline
 
 **Outcome:** Replace FASTA hashing and synthetic embeddings with validated bioinformatics features.
