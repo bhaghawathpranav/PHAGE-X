@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
+import importlib
 
 from app.main import app
+from app.feature_providers import IsolateLocusProteinSet
 
 
 client = TestClient(app)
@@ -84,4 +86,36 @@ def test_reference_locus_metadata_does_not_return_sequences():
     assert result["raw_sequences_returned"] is False
     assert len(result["protein_set_sha256"]) == 64
     assert len(result["database_sha256"]) == 64
+    assert "sequences" not in result
+
+
+def test_isolate_locus_endpoint_returns_only_provenance_metadata(monkeypatch):
+    main_module = importlib.import_module("app.main")
+
+    class Runner:
+        def type_and_extract_assembly(self, fasta):
+            return IsolateLocusProteinSet(
+                locus="KL107",
+                confidence="Typeable",
+                percent_identity=100,
+                percent_coverage=100,
+                names=["KL107_01", "KL107_02"],
+                sequences=["ACDE", "MKTAY"],
+                protein_set_sha256="a" * 64,
+                missing_genes=[],
+                problems="",
+                kaptive_version="3.2.0",
+            )
+
+    monkeypatch.setattr(main_module, "KaptiveRunner", Runner)
+    fasta = ">chromosome\n" + "ACGT" * 1_000_000
+    response = client.post("/api/extract-isolate-locus", json={"fasta": fasta})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["locus"] == "KL107"
+    assert result["protein_count"] == 2
+    assert result["species_status"] == "unconfirmed"
+    assert result["pipeline_status"].startswith("blocked")
+    assert result["raw_sequences_returned"] is False
+    assert result["sequence_persisted"] is False
     assert "sequences" not in result

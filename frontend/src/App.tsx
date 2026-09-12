@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
-import type { Analysis, AssemblyInspection, Isolate, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
+import { analyze, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankResearchHost } from "./api";
+import type { Analysis, AssemblyInspection, Isolate, IsolateLocusExtraction, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -192,6 +192,7 @@ export default function App() {
   const [researchHost, setResearchHost] = useState("");
   const [capabilities, setCapabilities] = useState<ProcessingCapabilities | null>(null);
   const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
+  const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
   const [fasta, setFasta] = useState(demoFasta);
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
@@ -277,12 +278,12 @@ export default function App() {
                     accept=".fasta,.fa,.fna,text/plain"
                     onChange={async (event) => {
                       const file = event.target.files?.[0];
-                      if (file) setFasta(await file.text());
+                      if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); }
                     }}
                   />
                 </label>
               </div>
-              <textarea id="fasta" value={fasta} onChange={(event) => setFasta(event.target.value)} spellCheck={false} />
+              <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); }} spellCheck={false} />
               <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
@@ -296,6 +297,14 @@ export default function App() {
                 catch (err) { setError(err instanceof Error ? err.message : "Inspection failed"); }
               }}>Inspect real-pipeline readiness</button>
               {inspection && <div className="inspection-result"><strong>Assembly QC: {inspection.qc_status}</strong><span>{inspection.contig_count} contig(s) · {inspection.total_length_bp.toLocaleString()} bp · N50 {inspection.n50_bp.toLocaleString()}</span><small>{inspection.sequence_persisted ? "Sequence stored" : "Sequence was not persisted"} · Pipeline {inspection.pipeline_status}</small></div>}
+              {inspection?.qc_status === "pass" && capabilities?.tools.kaptive && capabilities?.tools.minimap2 && (
+                <button className="inspect-button" onClick={async () => {
+                  setError(""); setLocusExtraction(null);
+                  try { setLocusExtraction(await extractIsolateLocus(fasta)); }
+                  catch (err) { setError(err instanceof Error ? err.message : "K-locus extraction failed"); }
+                }}>Extract isolate K-locus proteins</button>
+              )}
+              {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} validated proteins · {locusExtraction.percent_identity.toFixed(1)}% identity · {locusExtraction.percent_coverage.toFixed(1)}% coverage</span><small>Species {locusExtraction.species_status} · Scoring remains {locusExtraction.pipeline_status.replaceAll("-", " ")}</small></div>}
             </div>
           ) : (
             <div className="research-picker">

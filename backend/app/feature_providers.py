@@ -48,6 +48,20 @@ class LocusProteinSet:
 
 
 @dataclass(frozen=True)
+class IsolateLocusProteinSet:
+    locus: str
+    confidence: str
+    percent_identity: float
+    percent_coverage: float
+    names: List[str]
+    sequences: List[str]
+    protein_set_sha256: str
+    missing_genes: List[str]
+    problems: str
+    kaptive_version: str
+
+
+@dataclass(frozen=True)
 class LocusFeatureResult:
     locus: str
     protein_count: int
@@ -60,6 +74,7 @@ def capability_report() -> Dict[str, object]:
     tools = {
         "kaptive": find_executable("kaptive"),
         "blastn": find_executable("blastn"),
+        "minimap2": find_executable("minimap2"),
         "torch": importlib.util.find_spec("torch") is not None,
         "esm": importlib.util.find_spec("esm") is not None,
     }
@@ -83,6 +98,8 @@ class KaptiveRunner:
         executable = find_executable(self.executable)
         if not executable:
             raise RuntimeError("Kaptive executable is unavailable")
+        if not find_executable("minimap2"):
+            raise RuntimeError("minimap2 executable is unavailable")
         with tempfile.TemporaryDirectory(prefix="phagex-kaptive-") as directory:
             root = Path(directory)
             assembly = root / "isolate.fasta"
@@ -101,8 +118,52 @@ class KaptiveRunner:
             header, values = lines[0].split("\t"), lines[1].split("\t")
             record = dict(zip(header, values))
             locus = record.get("Best match locus") or record.get("Best match locus name") or "Unknown"
-            confidence = record.get("Confidence") or "Unknown"
+            confidence = record.get("Match confidence") or record.get("Confidence") or "Unknown"
             return KaptiveResult(best_match_locus=locus, confidence=confidence, raw_record=record)
+
+    def type_and_extract_assembly(self, fasta: str) -> IsolateLocusProteinSet:
+        executable = find_executable(self.executable)
+        if not executable:
+            raise RuntimeError("Kaptive executable is unavailable")
+        if not find_executable("minimap2"):
+            raise RuntimeError("minimap2 executable is unavailable")
+        with tempfile.TemporaryDirectory(prefix="phagex-kaptive-") as directory:
+            root = Path(directory)
+            assembly = root / "isolate.fasta"
+            json_output = root / "kaptive.jsonl"
+            assembly.write_text(fasta, encoding="utf-8")
+            try:
+                subprocess.run(
+                    [
+                        executable,
+                        "assembly",
+                        self.database,
+                        str(assembly),
+                        "--json",
+                        str(json_output),
+                        "--out",
+                        str(root / "kaptive.tsv"),
+                        "--threads",
+                        "1",
+                    ],
+                    check=True,
+                    timeout=self.timeout_seconds,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.TimeoutExpired as error:
+                raise RuntimeError("Kaptive assembly typing timed out") from error
+            except subprocess.CalledProcessError as error:
+                detail = (error.stderr or "Kaptive assembly typing failed").strip().splitlines()[-1]
+                raise RuntimeError(detail[:300]) from error
+            lines = [line for line in json_output.read_text(encoding="utf-8").splitlines() if line.strip()]
+            if len(lines) != 1:
+                raise RuntimeError("Kaptive did not return exactly one isolate record")
+            result = isolate_proteins_from_kaptive_record(json.loads(lines[0]))
+            return IsolateLocusProteinSet(
+                **result,
+                kaptive_version=self._version(executable),
+            )
 
     def extract_reference_proteins(self, locus: str) -> LocusProteinSet:
         if not re.fullmatch(r"KL[0-9]{1,4}", locus):
@@ -120,9 +181,7 @@ class KaptiveRunner:
         names, sequences = parse_protein_fasta(completed.stdout)
         if not sequences:
             raise ValueError(f"No reference proteins found for {locus}")
-        version = subprocess.run(
-            [executable, "--version"], check=True, capture_output=True, text=True, timeout=30
-        ).stdout.strip()
+        version = self._version(executable)
         try:
             import kaptive
 
@@ -139,6 +198,12 @@ class KaptiveRunner:
             database_sha256=database_sha256,
             kaptive_version=version,
         )
+
+    @staticmethod
+    def _version(executable: str) -> str:
+        return subprocess.run(
+            [executable, "--version"], check=True, capture_output=True, text=True, timeout=30
+        ).stdout.strip()
 
 
 def file_sha256(path: Path) -> str:
@@ -176,6 +241,63 @@ def parse_protein_fasta(value: str) -> tuple[List[str], List[str]]:
     if any(not allowed.fullmatch(sequence) for sequence in sequences):
         raise ValueError("Protein FASTA contains unsupported residues")
     return names, sequences
+
+
+def isolate_proteins_from_kaptive_record(record: Dict[str, object]) -> Dict[str, object]:
+    locus = str(record.get("best_match", ""))
+    if not re.fullmatch(r"KL[0-9]{1,4}", locus):
+        raise ValueError("Kaptive did not produce a valid Klebsiella K-locus call")
+    genes = record.get("expected_genes_inside_locus")
+    if not isinstance(genes, list) or not genes:
+        raise ValueError("Kaptive returned no expected genes inside the called locus")
+    missing = record.get("missing_genes", [])
+    if not isinstance(missing, list):
+        raise ValueError("Kaptive returned malformed missing-gene evidence")
+    confidence = str(record.get("confidence", "Unknown"))
+    problems = str(record.get("problems", ""))
+    if confidence != "Typeable":
+        raise ValueError(f"Kaptive confidence is {confidence}; a Typeable call is required")
+    if missing:
+        raise ValueError(f"Missing K-locus genes prevent embedding: {', '.join(map(str, missing[:5]))}")
+    if problems:
+        raise ValueError(f"Kaptive reported locus problems ({problems}); manual review is required")
+    names: List[str] = []
+    sequences: List[str] = []
+    incomplete: List[str] = []
+    for gene in genes:
+        if not isinstance(gene, dict):
+            raise ValueError("Kaptive returned a malformed gene record")
+        name = str(gene.get("gene", ""))
+        sequence = str(gene.get("protein_seq", "")).rstrip("*").upper()
+        partial = str(gene.get("partial", "False")).lower() == "true"
+        phenotype = str(gene.get("phenotype", ""))
+        coverage = float(gene.get("percent_coverage", 0))
+        if not name or not sequence:
+            incomplete.append(name or "unnamed")
+            continue
+        if partial or phenotype == "truncated" or coverage < 95:
+            incomplete.append(name)
+        if len(sequence) > 1022:
+            incomplete.append(name)
+        names.append(name)
+        sequences.append(sequence)
+    if incomplete:
+        raise ValueError(f"Incomplete K-locus genes prevent embedding: {', '.join(incomplete[:5])}")
+    if len(names) != len(set(names)):
+        raise ValueError("Kaptive returned duplicate expected genes")
+    parse_protein_fasta("".join(f">{name}\n{sequence}\n" for name, sequence in zip(names, sequences)))
+    normalized = "\n".join(f">{name}\n{sequence}" for name, sequence in zip(names, sequences))
+    return {
+        "locus": locus,
+        "confidence": confidence,
+        "percent_identity": float(record.get("percent_identity", 0)),
+        "percent_coverage": float(record.get("percent_coverage", 0)),
+        "names": names,
+        "sequences": sequences,
+        "protein_set_sha256": hashlib.sha256(normalized.encode()).hexdigest(),
+        "missing_genes": [str(item) for item in missing],
+        "problems": problems,
+    }
 
 
 class EmbeddingCache:
@@ -256,6 +378,29 @@ class ReferenceLocusFeaturePipeline:
 
     def build(self, locus: str) -> LocusFeatureResult:
         proteins = self.extractor.extract_reference_proteins(locus)
+        embedding = np.asarray(self.embedder.embed(proteins.sequences), dtype=np.float32)
+        if embedding.shape != (1280,):
+            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected (1280,)")
+        if not np.isfinite(embedding).all():
+            raise ValueError("ESM-2 provider returned non-finite values")
+        return LocusFeatureResult(
+            locus=proteins.locus,
+            protein_count=len(proteins.sequences),
+            protein_set_sha256=proteins.protein_set_sha256,
+            embedding_cache_key=EmbeddingCache.key(proteins.sequences),
+            embedding=embedding,
+        )
+
+
+class IsolateLocusFeaturePipeline:
+    """Type an assembly, extract validated isolate proteins, and embed them."""
+
+    def __init__(self, extractor: KaptiveRunner, embedder: ESM2Embedder):
+        self.extractor = extractor
+        self.embedder = embedder
+
+    def build(self, fasta: str) -> LocusFeatureResult:
+        proteins = self.extractor.type_and_extract_assembly(fasta)
         embedding = np.asarray(self.embedder.embed(proteins.sequences), dtype=np.float32)
         if embedding.shape != (1280,):
             raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected (1280,)")

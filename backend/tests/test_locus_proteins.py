@@ -1,8 +1,12 @@
 import numpy as np
 import pytest
+import subprocess
 
 from app.feature_providers import (
     KaptiveRunner,
+    IsolateLocusFeaturePipeline,
+    IsolateLocusProteinSet,
+    isolate_proteins_from_kaptive_record,
     LocusProteinSet,
     ReferenceLocusFeaturePipeline,
     find_executable,
@@ -75,3 +79,58 @@ def test_reference_locus_pipeline_rejects_wrong_embedding_shape():
 
     with pytest.raises(ValueError, match="expected"):
         ReferenceLocusFeaturePipeline(Extractor(), Embedder()).build("KL107")
+
+
+def test_incomplete_isolate_gene_evidence_fails_closed():
+    record = {
+        "best_match": "KL107",
+        "confidence": "Typeable",
+        "problems": "",
+        "missing_genes": ["KL107_09_gtr322"],
+        "expected_genes_inside_locus": [{"gene": "KL107_01_galF", "protein_seq": "ACDE"}],
+    }
+    with pytest.raises(ValueError, match="Missing K-locus genes"):
+        isolate_proteins_from_kaptive_record(record)
+
+
+@pytest.mark.skipif(
+    not find_executable("kaptive") or not find_executable("minimap2"),
+    reason="Kaptive assembly toolchain not installed",
+)
+def test_extracts_isolate_derived_proteins_from_reference_assembly():
+    executable = find_executable("kaptive")
+    reference = subprocess.run(
+        [executable, "extract", "kpsc_k", "--filter", "^KL107$", "--fna", "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    result = KaptiveRunner(timeout_seconds=60).type_and_extract_assembly(reference)
+    assert result.locus == "KL107"
+    assert result.confidence == "Typeable"
+    assert result.percent_identity == 100
+    assert result.percent_coverage == 100
+    assert len(result.sequences) == 16
+    assert not result.missing_genes
+    assert not result.problems
+
+
+def test_isolate_derived_proteins_are_handed_to_embedding_provider():
+    proteins = IsolateLocusProteinSet(
+        "KL107", "Typeable", 100, 100, ["one"], ["ACDE"], "a" * 64, [], "", "3.2.0"
+    )
+
+    class Extractor:
+        def type_and_extract_assembly(self, fasta):
+            assert fasta == ">isolate\nACGT"
+            return proteins
+
+    class Embedder:
+        def embed(self, sequences):
+            assert sequences == ["ACDE"]
+            return np.ones(1280, dtype=np.float32)
+
+    result = IsolateLocusFeaturePipeline(Extractor(), Embedder()).build(">isolate\nACGT")
+    assert result.locus == "KL107"
+    assert result.embedding.shape == (1280,)
+    assert result.protein_set_sha256 == "a" * 64

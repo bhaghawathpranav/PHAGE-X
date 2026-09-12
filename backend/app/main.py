@@ -18,6 +18,8 @@ from .schemas import (
     AssemblyInspectRequest,
     AssemblyInspectResponse,
     IsolateSummary,
+    IsolateLocusRequest,
+    IsolateLocusResponse,
     LabObservationRequest,
     LabObservationResponse,
     LocusProteinResponse,
@@ -164,4 +166,36 @@ def reference_locus_proteins(locus: str):
         esm2_status="ready" if capabilities["tools"]["torch"] and capabilities["tools"]["esm"] else "blocked-missing-local-runtime",
         raw_sequences_returned=False,
         disclaimer="Reference features for research use only; not evidence of isolate identity or phage susceptibility.",
+    )
+
+
+@app.post("/api/extract-isolate-locus", response_model=IsolateLocusResponse)
+def extract_isolate_locus(request: IsolateLocusRequest):
+    try:
+        _, qc = parse_assembly_fasta(request.fasta)
+        if qc.status != "pass":
+            raise ValueError("Assembly QC requires review before K-locus extraction")
+        proteins = KaptiveRunner().type_and_extract_assembly(request.fasta)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return IsolateLocusResponse(
+        assembly_sha256=qc.assembly_sha256,
+        locus=proteins.locus,
+        confidence=proteins.confidence,
+        percent_identity=proteins.percent_identity,
+        percent_coverage=proteins.percent_coverage,
+        protein_count=len(proteins.sequences),
+        total_residues=sum(map(len, proteins.sequences)),
+        protein_names=proteins.names,
+        protein_set_sha256=proteins.protein_set_sha256,
+        missing_genes=proteins.missing_genes,
+        problems=proteins.problems,
+        kaptive_version=proteins.kaptive_version,
+        species_status="unconfirmed",
+        pipeline_status="blocked-pending-species-confirmation-and-esm2",
+        raw_sequences_returned=False,
+        sequence_persisted=False,
+        disclaimer="Isolate-derived research features for laboratory validation only; not a susceptibility or treatment result.",
     )

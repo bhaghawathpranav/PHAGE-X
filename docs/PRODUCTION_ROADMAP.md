@@ -32,7 +32,7 @@ Production means more than putting the current demo on a server. Each milestone 
 
 **Exit gate:** Sequence QC, species confirmation, MLST/K-locus calling, receptor/RBP features, cached ESM-2 embeddings, provenance, deterministic processing, and failure handling pass on a reference set.
 
-**Status:** Real released ESM-2 embeddings are supported for model development. Multi-contig upload QC checks size, alphabet, ambiguity, GC, total length, N50, and digest. Kaptive and ESM-2 providers, capability reporting, and a sequence-free vector cache are implemented and fail closed. Canonical K-locus reference proteins can now be extracted, provenance-fingerprinted, and handed to the 1,280-dimensional ESM-2 contract. Isolate-specific CDS mapping, species confirmation, the remaining local toolchain, and reference-set validation remain blocking; demo uploads still say placeholder explicitly.
+**Status:** Real released ESM-2 embeddings are supported for model development. Multi-contig upload QC checks size, alphabet, ambiguity, GC, total length, N50, and digest. Kaptive and ESM-2 providers, capability reporting, and a sequence-free vector cache are implemented and fail closed. Canonical and isolate-derived K-locus proteins can be extracted, completeness-validated, provenance-fingerprinted, and handed to the 1,280-dimensional ESM-2 contract. A genome-sized KL107 fixture passes with 100% identity/coverage and 16 proteins. Species confirmation, the local ESM-2 runtime, broader reference-set validation, and receptor/RBP extraction remain blocking; demo uploads still say placeholder explicitly.
 
 ## M4 — Trained compatibility model
 

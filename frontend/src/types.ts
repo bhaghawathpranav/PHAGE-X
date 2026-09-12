@@ -89,3 +89,23 @@ export type AssemblyInspection = {
   blockers: string[];
   sequence_persisted: boolean;
 };
+
+export type IsolateLocusExtraction = {
+  assembly_sha256: string;
+  locus: string;
+  confidence: string;
+  percent_identity: number;
+  percent_coverage: number;
+  protein_count: number;
+  total_residues: number;
+  protein_names: string[];
+  protein_set_sha256: string;
+  missing_genes: string[];
+  problems: string;
+  kaptive_version: string;
+  species_status: string;
+  pipeline_status: string;
+  raw_sequences_returned: boolean;
+  sequence_persisted: boolean;
+  disclaimer: string;
+};

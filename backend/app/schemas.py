@@ -154,3 +154,27 @@ class LocusProteinResponse(BaseModel):
     esm2_status: str
     raw_sequences_returned: bool
     disclaimer: str
+
+
+class IsolateLocusRequest(BaseModel):
+    fasta: str = Field(min_length=100, max_length=15_000_000)
+
+
+class IsolateLocusResponse(BaseModel):
+    assembly_sha256: str
+    locus: str
+    confidence: str
+    percent_identity: float
+    percent_coverage: float
+    protein_count: int
+    total_residues: int
+    protein_names: List[str]
+    protein_set_sha256: str
+    missing_genes: List[str]
+    problems: str
+    kaptive_version: str
+    species_status: str
+    pipeline_status: str
+    raw_sequences_returned: bool
+    sequence_persisted: bool
+    disclaimer: str

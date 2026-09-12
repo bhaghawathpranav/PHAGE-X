@@ -1,7 +1,6 @@
 -r requirements.txt
-# Kaptive requires BLAST+ to be installed separately on the host.
+# Kaptive assembly typing requires minimap2 to be installed separately on the host.
 kaptive==3.2.0
 # ESM-2 runtime is platform-specific and intentionally installed separately:
 # fair-esm==2.0.0
 # torch (use the appropriate CPU/CUDA wheel for the deployment platform)
-
