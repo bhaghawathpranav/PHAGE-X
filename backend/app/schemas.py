@@ -98,3 +98,26 @@ class LabObservationResponse(BaseModel):
     observation_id: str
     created_at: str
     status: str
+
+
+class ResearchRankRequest(BaseModel):
+    host_id: str = Field(min_length=1, max_length=100)
+    limit: int = Field(default=20, ge=1, le=105)
+
+
+class ResearchCandidate(BaseModel):
+    phage_id: str
+    compatibility: float
+    decision: str
+    safety_status: str
+
+
+class ResearchRankResponse(BaseModel):
+    host_id: str
+    split_role: str
+    model_version: str
+    feature_source: str
+    candidates: List[ResearchCandidate]
+    cocktail_status: str
+    cocktail_blockers: List[str]
+    disclaimer: str

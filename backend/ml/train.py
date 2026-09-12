@@ -13,7 +13,13 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
-from .dataset import grouped_three_way_split, load_pair_dataset, top_k_recall, validate_source_files
+from .dataset import (
+    grouped_three_way_split,
+    load_pair_dataset,
+    top_k_recall,
+    validate_source_files,
+    write_runtime_catalog,
+)
 from .registry import write_release_manifest
 
 
@@ -100,6 +106,11 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
             "validation_pairs": len(validation),
             "test_pairs": len(test),
         },
+        "runtime_catalog": {
+            "host_split": "fixed seed-41 test hosts only",
+            "host_ids": sorted(set(dataset.hosts[test])),
+            "phage_count": int(len(np.unique(dataset.phages))),
+        },
         "metrics": metrics,
         "repeated_host_holdout": {
             "repeats": repeats,
@@ -131,9 +142,11 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
     output_dir.mkdir(parents=True, exist_ok=True)
     model_path = output_dir / "model.joblib"
     model_card_path = output_dir / "model_card.json"
+    catalog_path = output_dir / "runtime_catalog.npz"
     joblib.dump({"model": model, "calibrator": calibrator, "feature_names": dataset.feature_names}, model_path)
     model_card_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    write_release_manifest(model_path, model_card_path, output_dir / "release_manifest.json")
+    write_runtime_catalog(data_dir, dataset.hosts[test], catalog_path)
+    write_release_manifest(model_path, model_card_path, output_dir / "release_manifest.json", catalog_path)
     print(json.dumps(report, indent=2))
 
 

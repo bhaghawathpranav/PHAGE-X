@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, getIsolates } from "./api";
-import type { Analysis, Isolate, RankedPhage } from "./types";
+import { analyze, getIsolates, getResearchIsolates, rankResearchHost } from "./api";
+import type { Analysis, Isolate, RankedPhage, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -152,18 +152,54 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
   );
 }
 
+function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: () => void }) {
+  return (
+    <main className="results page-shell">
+      <div className="results-head">
+        <div>
+          <span className="eyebrow"><Network size={14} /> HELD-OUT RESEARCH BENCHMARK</span>
+          <h1>Real-model ranking for <em>{result.host_id}</em></h1>
+          <p>{result.feature_source} · {result.model_version}</p>
+        </div>
+        <button className="ghost-button" onClick={onReset}>New analysis</button>
+      </div>
+      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
+      <section className="panel blocked-panel">
+        <AlertTriangle size={24} />
+        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Ranking stops at laboratory prioritization</h2>
+          {result.cocktail_blockers.map((item) => <p key={item}>{item}</p>)}
+        </div>
+      </section>
+      <section className="panel ranking-panel">
+        <div className="panel-heading compact"><div><span className="step-label">REAL PRECOMPUTED EMBEDDINGS</span><h2>Ranked dataset phages</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
+        <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
+        {result.candidates.map((candidate, index) => (
+          <div className="research-row" key={candidate.phage_id}>
+            <span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
+            <em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
+          </div>
+        ))}
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   const [isolates, setIsolates] = useState<Isolate[]>([]);
   const [selected, setSelected] = useState("kp-mdr-001");
-  const [mode, setMode] = useState<"demo" | "upload">("demo");
+  const [mode, setMode] = useState<"demo" | "upload" | "research">("demo");
+  const [researchIsolates, setResearchIsolates] = useState<string[]>([]);
+  const [researchHost, setResearchHost] = useState("");
   const [fasta, setFasta] = useState(demoFasta);
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
+  const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getIsolates().then(setIsolates).catch((err) => setError(err.message));
+    getResearchIsolates().then((items) => { setResearchIsolates(items); setResearchHost(items[0] || ""); }).catch((err) => setError(err.message));
   }, []);
 
   const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
@@ -172,10 +208,14 @@ export default function App() {
     setLoading(true);
     setError("");
     try {
-      const next = await analyze(mode === "demo"
-        ? { isolate_id: selected, cocktail_size: size }
-        : { fasta, isolate_name: "Uploaded KPN isolate", cocktail_size: size });
-      setResult(next);
+      if (mode === "research") {
+        setResearchResult(await rankResearchHost(researchHost));
+      } else {
+        const next = await analyze(mode === "demo"
+          ? { isolate_id: selected, cocktail_size: size }
+          : { fasta, isolate_name: "Uploaded KPN isolate", cocktail_size: size });
+        setResult(next);
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
@@ -185,6 +225,7 @@ export default function App() {
   }
 
   if (result) return <><Header /><Results result={result} onReset={() => setResult(null)} /></>;
+  if (researchResult) return <><Header /><ResearchResults result={researchResult} onReset={() => setResearchResult(null)} /></>;
 
   return (
     <div className="app">
@@ -208,6 +249,7 @@ export default function App() {
           <div className="tabs">
             <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Demo cases</button>
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Upload FASTA</button>
+            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Real benchmark</button>
           </div>
 
           {mode === "demo" ? (
@@ -221,7 +263,7 @@ export default function App() {
               ))}
               {active && <div className="case-detail"><p>{active.description}</p><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div></div>}
             </div>
-          ) : (
+          ) : mode === "upload" ? (
             <div className="upload-area">
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
@@ -240,12 +282,20 @@ export default function App() {
               <textarea id="fasta" value={fasta} onChange={(event) => setFasta(event.target.value)} spellCheck={false} />
               <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
             </div>
+          ) : (
+            <div className="research-picker">
+              <label htmlFor="research-host">Held-out PhageHostLearn isolate</label>
+              <select id="research-host" value={researchHost} onChange={(event) => setResearchHost(event.target.value)}>
+                {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
+              </select>
+              <p><Info size={14} />This path uses the trained model and real released ESM-2 embeddings. Cocktail construction stays blocked.</p>
+            </div>
           )}
 
-          <div className="size-picker"><span>Cocktail size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>
+          {mode !== "research" && <div className="size-picker"><span>Cocktail size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
           {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
-          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active)}>
-            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>Run candidate discovery <ArrowRight size={18} /></>}
+          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "research" && !researchHost)}>
+            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>{mode === "research" ? "Run held-out benchmark" : "Run candidate discovery"} <ArrowRight size={18} /></>}
           </button>
           <p className="privacy"><ShieldCheck size={13} /> Runs locally. No external APIs or sequence uploads.</p>
         </section>

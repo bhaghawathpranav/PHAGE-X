@@ -4,6 +4,8 @@
 
 The reproducible training pipeline uses the public PhageHostLearn release (Zenodo DOI `10.5281/zenodo.11061100`, CC BY 4.0). It aligns observed interaction labels with the release's 1,280-dimensional ESM-2 K-locus and receptor-binding-protein embeddings.
 
+The runtime bundle contains only fixed seed-41 test-host embeddings, aggregate phage embeddings, RBP counts, the model, and calibrator. Artifact hashes are verified before deserialization. The benchmark API refuses identifiers outside that held-out host list and blocks cocktail generation.
+
 Multiple RBP embeddings per phage are mean-pooled. Eleven pairwise features capture cosine similarity, distances, element-wise products, embedding norms, and RBP count. A class-balanced histogram gradient-boosting model is fitted, then its probabilities are calibrated on a separate validation-host split.
 
 Hosts—not individual rows—are divided across train, validation, and test sets. This prevents the same bacterial isolate appearing in both training and test pairs. The generated `backend/artifacts/model_card.json` records exact source hashes, split counts, runtime versions, metrics, feature importance, and abstention coverage.

@@ -14,6 +14,7 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Ranked strictly lytic demo phages with feature contributions
 - Greedy cocktail construction using compatibility + diversity − redundancy
 - Responsive React UI, FastAPI schema/docs, and API tests
+- Separate real-model benchmark mode restricted to held-out PhageHostLearn isolates
 
 ## Run locally
 
@@ -44,6 +45,8 @@ cd frontend && npm run build
 5. Return to the input and switch to FASTA to show the future-facing interface.
 
 The dataset is deliberately synthetic-compatible: it supports a reproducible product demo but must not be represented as experimentally validated observations. See [architecture notes](docs/ARCHITECTURE.md) for model details and the upgrade path.
+
+The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
 ## Production path
 

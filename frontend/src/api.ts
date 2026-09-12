@@ -1,4 +1,4 @@
-import type { Analysis, Isolate } from "./types";
+import type { Analysis, Isolate, ResearchRank } from "./types";
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:8000");
 
@@ -25,6 +25,20 @@ export async function analyze(payload: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function getResearchIsolates(): Promise<string[]> {
+  return parse(await fetch(`${API}/api/research-isolates`));
+}
+
+export async function rankResearchHost(host_id: string): Promise<ResearchRank> {
+  return parse(
+    await fetch(`${API}/api/research-rank`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ host_id, limit: 20 }),
     }),
   );
 }

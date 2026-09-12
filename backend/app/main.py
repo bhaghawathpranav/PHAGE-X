@@ -9,12 +9,15 @@ from .data import load_demo_data
 from .feedback import LabObservationStore
 from .inference import analyze, isolate_from_fasta
 from .observability import RequestContextMiddleware
+from .research_model import get_research_model
 from .schemas import (
     AnalysisResponse,
     AnalyzeRequest,
     IsolateSummary,
     LabObservationRequest,
     LabObservationResponse,
+    ResearchRankRequest,
+    ResearchRankResponse,
 )
 
 
@@ -84,3 +87,21 @@ def run_analysis(request: AnalyzeRequest):
 def record_lab_observation(request: LabObservationRequest):
     """Record a non-patient research assay result; never changes prediction claims automatically."""
     return LabObservationStore(Path(settings.feedback_db)).add(request)
+
+
+@app.get("/api/research-model")
+def research_model_status():
+    return get_research_model().status()
+
+
+@app.get("/api/research-isolates", response_model=list[str])
+def research_isolates():
+    return [str(item) for item in get_research_model().host_ids]
+
+
+@app.post("/api/research-rank", response_model=ResearchRankResponse)
+def research_rank(request: ResearchRankRequest):
+    try:
+        return get_research_model().rank(request.host_id, request.limit)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Held-out research isolate not found") from error

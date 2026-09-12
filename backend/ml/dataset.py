@@ -10,20 +10,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
+from app.pair_features import FEATURE_NAMES, pair_features
 
-FEATURE_NAMES = (
-    "cosine_similarity",
-    "euclidean_distance",
-    "absolute_difference_mean",
-    "absolute_difference_std",
-    "absolute_difference_max",
-    "element_product_mean",
-    "element_product_std",
-    "element_product_max",
-    "host_embedding_norm",
-    "phage_embedding_norm",
-    "rbp_count",
-)
 
 
 @dataclass(frozen=True)
@@ -59,30 +47,6 @@ def validate_source_files(data_dir: Path, manifest_path: Path) -> Dict[str, str]
     return observed
 
 
-def _features(host: np.ndarray, phage: np.ndarray, rbp_count: int) -> np.ndarray:
-    host_norm = float(np.linalg.norm(host))
-    phage_norm = float(np.linalg.norm(phage))
-    cosine = float(np.dot(host, phage) / (host_norm * phage_norm)) if host_norm and phage_norm else 0.0
-    absolute = np.abs(host - phage)
-    product = host * phage
-    return np.array(
-        [
-            cosine,
-            np.linalg.norm(host - phage),
-            absolute.mean(),
-            absolute.std(),
-            absolute.max(),
-            product.mean(),
-            product.std(),
-            product.max(),
-            host_norm,
-            phage_norm,
-            float(rbp_count),
-        ],
-        dtype=np.float32,
-    )
-
-
 def load_pair_dataset(data_dir: Path) -> PairDataset:
     interactions = pd.read_csv(data_dir / "phage_host_interactions.csv", index_col=0)
     loci = pd.read_csv(data_dir / "esm2_embeddings_loci.csv", index_col="accession")
@@ -108,7 +72,7 @@ def load_pair_dataset(data_dir: Path) -> PairDataset:
             if pd.isna(label):
                 continue
             features.append(
-                _features(
+                pair_features(
                     host_vector,
                     phage_embeddings.loc[phage_id].to_numpy(dtype=np.float32),
                     rbp_counts[phage_id],
@@ -126,6 +90,25 @@ def load_pair_dataset(data_dir: Path) -> PairDataset:
     if set(np.unique(result.y)) != {0, 1}:
         raise ValueError("Interaction labels must contain both classes")
     return result
+
+
+def write_runtime_catalog(data_dir: Path, test_hosts: Iterable[str], output_path: Path) -> None:
+    loci = pd.read_csv(data_dir / "esm2_embeddings_loci.csv", index_col="accession")
+    rbps = pd.read_csv(data_dir / "esm2_embeddings_rbp.csv")
+    embedding_columns = [str(index) for index in range(1280)]
+    phage_groups = rbps.groupby("phage_ID")
+    phage_embeddings = phage_groups[embedding_columns].mean()
+    rbp_counts = phage_groups.size()
+    host_ids = sorted(set(test_hosts) & set(loci.index))
+    phage_ids = sorted(phage_embeddings.index)
+    np.savez_compressed(
+        output_path,
+        host_ids=np.asarray(host_ids, dtype=str),
+        host_vectors=loci.loc[host_ids, embedding_columns].to_numpy(dtype=np.float32),
+        phage_ids=np.asarray(phage_ids, dtype=str),
+        phage_vectors=phage_embeddings.loc[phage_ids].to_numpy(dtype=np.float32),
+        rbp_counts=rbp_counts.loc[phage_ids].to_numpy(dtype=np.int16),
+    )
 
 
 def grouped_three_way_split(
@@ -154,4 +137,3 @@ def top_k_recall(y: np.ndarray, probabilities: np.ndarray, hosts: Iterable[str],
         eligible += 1
         hits += int(group.nlargest(k, "probability")["label"].any())
     return hits / eligible if eligible else 0.0
-

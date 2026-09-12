@@ -1,6 +1,6 @@
 {
   "artifact_version": "phagex-hgb-0.1.0",
-  "created_at": "2026-09-12T05:56:35.766130+00:00",
+  "created_at": "2026-09-12T06:03:04.134524+00:00",
   "research_only": true,
   "dataset_doi": "10.5281/zenodo.11061100",
   "source_sha256": {
@@ -31,6 +31,42 @@
     "train_pairs": 6979,
     "validation_pairs": 1543,
     "test_pairs": 1484
+  },
+  "runtime_catalog": {
+    "host_split": "fixed seed-41 test hosts only",
+    "host_ids": [
+      "201KP-HG",
+      "2164",
+      "228",
+      "CU276",
+      "CU293",
+      "CU503",
+      "ERS685294",
+      "ERS686706",
+      "ERS702130",
+      "ERS702132",
+      "ERS706555",
+      "ERS747612",
+      "ERS764450",
+      "ERS799797",
+      "HCV1_35",
+      "HGV2C_02",
+      "HGV2C_20",
+      "HGV2C_37",
+      "HGV2_370",
+      "HLF1_40",
+      "HLF1_54",
+      "KP_HGE01_042",
+      "KP_HGE01_045",
+      "KP_HGUA02_051",
+      "KP_HGUA02_055",
+      "KP_HGUA02_064",
+      "KP_HGUA03_117",
+      "Kpcas054",
+      "Moliner_02",
+      "Moliner_08"
+    ],
+    "phage_count": 105
   },
   "metrics": {
     "roc_auc": 0.9055100974930361,

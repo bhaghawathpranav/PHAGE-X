@@ -50,3 +50,19 @@ export type Analysis = {
   limitations: string[];
   disclaimer: string;
 };
+
+export type ResearchRank = {
+  host_id: string;
+  split_role: string;
+  model_version: string;
+  feature_source: string;
+  candidates: {
+    phage_id: string;
+    compatibility: number;
+    decision: string;
+    safety_status: string;
+  }[];
+  cocktail_status: string;
+  cocktail_blockers: string[];
+  disclaimer: string;
+};

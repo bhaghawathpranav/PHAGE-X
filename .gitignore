@@ -8,4 +8,3 @@ frontend/dist/
 *.tsbuildinfo
 .env
 work/
-backend/artifacts/*.joblib
