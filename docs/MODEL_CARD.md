@@ -8,7 +8,7 @@ The runtime bundle contains only fixed seed-41 test-host embeddings, aggregate p
 
 Multiple RBP embeddings per phage are mean-pooled. Eleven pairwise features capture cosine similarity, distances, element-wise products, embedding norms, and RBP count. A class-balanced histogram gradient-boosting model is fitted, then its probabilities are calibrated on a separate validation-host split.
 
-Hosts—not individual rows—are divided across train, validation, and test sets. This prevents the same bacterial isolate appearing in both training and test pairs. The generated `backend/artifacts/model_card.json` records exact source hashes, split counts, runtime versions, metrics, feature importance, and abstention coverage.
+Hosts—not individual rows—are divided across train, validation, and test sets. This prevents the same bacterial isolate appearing in both training and test pairs. The generated `backend/artifacts/model_card.json` records exact source hashes, split counts, runtime versions, metrics, feature importance, host-bootstrap confidence intervals, calibration bins, threshold error counts, and abstention coverage.
 
 ## Latest local benchmark
 
@@ -24,12 +24,14 @@ Hosts—not individual rows—are divided across train, validation, and test set
 
 These are development results from one deterministic split, not publication-quality or clinical-validation results. The positive class is sparse, missing observations may not be true negatives, and the compact feature model does not reproduce the paper's full multi-instance method.
 
+The 500-repeat host bootstrap gives 95% intervals of 0.842–0.955 for AUROC, 0.197–0.579 for average precision, and 0.014–0.037 for Brier score. Ten-bin expected calibration error is 0.017. These are internal uncertainty estimates, not external validation.
+
 Across five additional host-disjoint holdouts, mean AUROC was 0.755 (range 0.680–0.826), mean average precision was 0.277 (range 0.190–0.368), mean top-3 recall was 0.679, and mean top-5 recall was 0.719. This variance is why the generated artifact is explicitly marked `release_decision.approved: false` despite the stronger fixed-split result.
 
 ## Required before model release
 
 - Repeated grouped cross-validation and an untouched external dataset
-- Bootstrap confidence intervals and prespecified acceptance thresholds
+- Prespecified acceptance thresholds approved before external evaluation
 - Subgroup analysis by K-locus, sequence type, source study, and novelty
 - Negative-label sensitivity analysis
 - Calibration and abstention thresholds selected without test-set tuning

@@ -1,9 +1,9 @@
 {
-  "created_at": "2026-09-12T06:03:04.236876+00:00",
+  "created_at": "2026-09-12T18:38:18.852335+00:00",
   "research_only": true,
   "artifacts": {
     "model.joblib": "a93edbdbfdb7879a05d8be5138b84d7c67f6729753dac5fd98054953338462fa",
-    "model_card.json": "5555ad08789d8621909ce545fe5c29f9048d28a264f50df83480f67da8cf2e95",
+    "model_card.json": "22aab8ccaa5a02b28d68913a445264bbc0575ab3cb5fa4c4c9de8796d6795185",
     "runtime_catalog.npz": "a12e1cb4e7f826dfbc59113a5a13abe4a7ac725f1e6d5a1fed227d5c9935a491"
   }
 }

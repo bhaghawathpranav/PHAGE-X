@@ -53,6 +53,40 @@ def _fit_and_score(dataset, train, validation, test):
     return model, calibrator, probabilities, metrics
 
 
+def _host_bootstrap_intervals(labels, probabilities, hosts, repeats: int = 500):
+    unique_hosts = np.unique(hosts)
+    rng = np.random.default_rng(41)
+    samples = {"roc_auc": [], "average_precision": [], "brier_score": []}
+    for _ in range(repeats):
+        selected = rng.choice(unique_hosts, size=len(unique_hosts), replace=True)
+        indices = np.concatenate([np.flatnonzero(hosts == host) for host in selected])
+        y = labels[indices]
+        if len(np.unique(y)) < 2:
+            continue
+        samples["roc_auc"].append(roc_auc_score(y, probabilities[indices]))
+        samples["average_precision"].append(average_precision_score(y, probabilities[indices]))
+        samples["brier_score"].append(brier_score_loss(y, probabilities[indices]))
+    return {
+        name: {"lower_95": float(np.percentile(values, 2.5)), "upper_95": float(np.percentile(values, 97.5))}
+        for name, values in samples.items()
+    }
+
+
+def _calibration_report(labels, probabilities):
+    bins = np.linspace(0, 1, 11)
+    rows = []
+    weighted_error = 0.0
+    for lower, upper in zip(bins[:-1], bins[1:]):
+        mask = (probabilities >= lower) & (probabilities < upper if upper < 1 else probabilities <= upper)
+        if not mask.any():
+            continue
+        predicted = float(probabilities[mask].mean())
+        observed = float(labels[mask].mean())
+        weighted_error += int(mask.sum()) * abs(predicted - observed)
+        rows.append({"lower": float(lower), "upper": float(upper), "count": int(mask.sum()), "predicted": predicted, "observed": observed})
+    return {"expected_calibration_error": weighted_error / len(labels), "bins": rows}
+
+
 def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> None:
     source_hashes = validate_source_files(data_dir, manifest)
     dataset = load_pair_dataset(data_dir)
@@ -112,6 +146,8 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
             "phage_count": int(len(np.unique(dataset.phages))),
         },
         "metrics": metrics,
+        "host_bootstrap_95_ci": _host_bootstrap_intervals(dataset.y[test], probabilities, dataset.hosts[test]),
+        "calibration": _calibration_report(dataset.y[test], probabilities),
         "repeated_host_holdout": {
             "repeats": repeats,
             "seeds": list(range(100, 100 + repeats)),
@@ -126,6 +162,12 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
         "abstention": {
             "rule": "abstain when calibrated probability is between 0.35 and 0.65",
             "test_fraction": float(abstain.mean()),
+            "decided_pairs": int((~abstain).sum()),
+        },
+        "error_analysis": {
+            "false_positive_count_at_0_65": int(((probabilities >= 0.65) & (dataset.y[test] == 0)).sum()),
+            "false_negative_count_at_0_35": int(((probabilities <= 0.35) & (dataset.y[test] == 1)).sum()),
+            "note": "Study-negative labels may represent untested or unknown interactions, not confirmed resistance.",
         },
         "runtime": {
             "python": platform.python_version(),

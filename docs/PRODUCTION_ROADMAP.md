@@ -42,7 +42,7 @@ The offline runtime now also contains the authors' raw genome archive for all 10
 
 **Exit gate:** Locked test-set AUROC/AUPRC plus top-k retrieval, calibration, subgroup performance, uncertainty, confidence intervals, ablations, and error analysis meet predeclared thresholds. SHAP explanations are checked for stability and biological plausibility.
 
-**Status:** A calibrated histogram gradient-boosting baseline is trained on 10,006 real labeled pairs with host-disjoint testing, permutation importance, abstention, and five repeated holdouts. Release remains explicitly blocked pending external validation, confidence intervals, subgroup analysis, and independent review.
+**Status:** A calibrated histogram gradient-boosting baseline is trained on 10,006 real labeled pairs with host-disjoint testing, permutation importance, explicit abstention, five repeated holdouts, host-level bootstrap confidence intervals, ten-bin calibration reporting, and threshold error counts. Release remains explicitly blocked pending a second external dataset, biologically meaningful subgroup labels, explanation review, and independent review.
 
 ## M5 — Cocktail optimizer validation
 

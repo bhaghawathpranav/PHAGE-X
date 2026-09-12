@@ -1,13 +1,15 @@
 {
   "artifact_version": "phagex-hgb-0.1.0",
-  "created_at": "2026-09-12T06:03:04.134524+00:00",
+  "created_at": "2026-09-12T18:38:16.614730+00:00",
   "research_only": true,
   "dataset_doi": "10.5281/zenodo.11061100",
   "source_sha256": {
     "phage_host_interactions.csv": "b9d8822ca73de87036bfe46c05db5e8efc1a31804a7ea07915cf1503d9d8c8c1",
     "esm2_embeddings_loci.csv": "e448936b34755bea473978710cd39c046fd8174381029e0ca8c455226c549e59",
     "esm2_embeddings_rbp.csv": "c282a434f92b6702d54baa821adcdb563070020e9b9fe29a045a1515e53bc990",
-    "esm2_embeddings_loci_invitro.csv": "62d9b27eb3f36c8e0af77e0f39d512178863ef73c274dda54954bcd4de622e96"
+    "esm2_embeddings_loci_invitro.csv": "62d9b27eb3f36c8e0af77e0f39d512178863ef73c274dda54954bcd4de622e96",
+    "phages_genomes.zip": "1941cfb11b924cde4e5259d308745f89d0acc697879ce771def617e7d97756dc",
+    "RBPbase.csv": "3e1b820993a240b1faa12547c6b1a796585b8f40c3dc777c2ae3a9afbf1e0dce"
   },
   "feature_names": [
     "cosine_similarity",
@@ -74,6 +76,53 @@
     "brier_score": 0.02556118173102306,
     "top_3_host_recall": 0.7894736842105263,
     "top_5_host_recall": 0.8947368421052632
+  },
+  "host_bootstrap_95_ci": {
+    "roc_auc": {
+      "lower_95": 0.8416391654961474,
+      "upper_95": 0.954678449815207
+    },
+    "average_precision": {
+      "lower_95": 0.1971643218996776,
+      "upper_95": 0.5792553415499695
+    },
+    "brier_score": {
+      "lower_95": 0.014210962862239234,
+      "upper_95": 0.037453998478797185
+    }
+  },
+  "calibration": {
+    "expected_calibration_error": 0.016972748440454377,
+    "bins": [
+      {
+        "lower": 0.0,
+        "upper": 0.1,
+        "count": 1367,
+        "predicted": 0.02569393271294375,
+        "observed": 0.013167520117044623
+      },
+      {
+        "lower": 0.1,
+        "upper": 0.2,
+        "count": 68,
+        "predicted": 0.1476261952973448,
+        "observed": 0.1323529411764706
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.30000000000000004,
+        "count": 34,
+        "predicted": 0.2596852880058878,
+        "observed": 0.38235294117647056
+      },
+      {
+        "lower": 0.30000000000000004,
+        "upper": 0.4,
+        "count": 15,
+        "predicted": 0.34302192139860466,
+        "observed": 0.5333333333333333
+      }
+    ]
   },
   "repeated_host_holdout": {
     "repeats": 5,
@@ -181,7 +230,13 @@
   ],
   "abstention": {
     "rule": "abstain when calibrated probability is between 0.35 and 0.65",
-    "test_fraction": 0.0033692722371967657
+    "test_fraction": 0.0033692722371967657,
+    "decided_pairs": 1479
+  },
+  "error_analysis": {
+    "false_positive_count_at_0_65": 0,
+    "false_negative_count_at_0_35": 46,
+    "note": "Study-negative labels may represent untested or unknown interactions, not confirmed resistance."
   },
   "runtime": {
     "python": "3.9.6",
