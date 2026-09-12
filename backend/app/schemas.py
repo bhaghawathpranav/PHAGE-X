@@ -140,3 +140,17 @@ class AssemblyInspectResponse(BaseModel):
     completed_stages: List[str]
     blockers: List[str]
     sequence_persisted: bool
+
+
+class LocusProteinResponse(BaseModel):
+    locus: str
+    protein_count: int
+    total_residues: int
+    longest_protein: int
+    protein_names: List[str]
+    protein_set_sha256: str
+    database_sha256: str
+    kaptive_version: str
+    esm2_status: str
+    raw_sequences_returned: bool
+    disclaimer: str

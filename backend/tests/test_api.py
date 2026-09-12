@@ -73,3 +73,15 @@ def test_assembly_inspection_is_fail_closed_without_toolchain():
     assert result["sequence_persisted"] is False
     assert result["pipeline_status"] in {"blocked", "ready-for-local-feature-extraction"}
     assert "digest-provenance" in result["completed_stages"]
+
+
+def test_reference_locus_metadata_does_not_return_sequences():
+    response = client.get("/api/reference-locus/KL107")
+    assert response.status_code == 200
+    result = response.json()
+    assert result["locus"] == "KL107"
+    assert result["protein_count"] >= 10
+    assert result["raw_sequences_returned"] is False
+    assert len(result["protein_set_sha256"]) == 64
+    assert len(result["database_sha256"]) == 64
+    assert "sequences" not in result

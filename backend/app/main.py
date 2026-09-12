@@ -8,7 +8,7 @@ from .config import get_settings
 from .assembly import parse_assembly_fasta
 from .data import load_demo_data
 from .feedback import LabObservationStore
-from .feature_providers import capability_report
+from .feature_providers import KaptiveRunner, capability_report
 from .inference import analyze, isolate_from_fasta
 from .observability import RequestContextMiddleware
 from .research_model import get_research_model
@@ -20,6 +20,7 @@ from .schemas import (
     IsolateSummary,
     LabObservationRequest,
     LabObservationResponse,
+    LocusProteinResponse,
     ResearchRankRequest,
     ResearchRankResponse,
 )
@@ -139,4 +140,28 @@ def inspect_assembly(request: AssemblyInspectRequest):
         completed_stages=["fasta-parse", "assembly-qc", "digest-provenance"],
         blockers=blockers,
         sequence_persisted=False,
+    )
+
+
+@app.get("/api/reference-locus/{locus}", response_model=LocusProteinResponse)
+def reference_locus_proteins(locus: str):
+    try:
+        proteins = KaptiveRunner().extract_reference_proteins(locus.upper())
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    capabilities = capability_report()
+    return LocusProteinResponse(
+        locus=proteins.locus,
+        protein_count=len(proteins.sequences),
+        total_residues=sum(map(len, proteins.sequences)),
+        longest_protein=max(map(len, proteins.sequences)),
+        protein_names=proteins.names,
+        protein_set_sha256=proteins.protein_set_sha256,
+        database_sha256=proteins.database_sha256,
+        kaptive_version=proteins.kaptive_version,
+        esm2_status="ready" if capabilities["tools"]["torch"] and capabilities["tools"]["esm"] else "blocked-missing-local-runtime",
+        raw_sequences_returned=False,
+        disclaimer="Reference features for research use only; not evidence of isolate identity or phage susceptibility.",
     )

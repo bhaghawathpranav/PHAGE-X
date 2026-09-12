@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence
 
@@ -17,6 +19,17 @@ import numpy as np
 ESM2_MODEL = "esm2_t33_650M_UR50D"
 
 
+def find_executable(name: str) -> str | None:
+    resolved = shutil.which(name)
+    if resolved:
+        return resolved
+    candidates = [
+        Path(sys.prefix) / "bin" / name,
+        Path(sys.executable).parent / name,
+    ]
+    return next((str(candidate) for candidate in candidates if candidate.exists() and candidate.is_file()), None)
+
+
 @dataclass(frozen=True)
 class KaptiveResult:
     best_match_locus: str
@@ -24,10 +37,29 @@ class KaptiveResult:
     raw_record: Dict[str, str]
 
 
+@dataclass(frozen=True)
+class LocusProteinSet:
+    locus: str
+    names: List[str]
+    sequences: List[str]
+    protein_set_sha256: str
+    database_sha256: str
+    kaptive_version: str
+
+
+@dataclass(frozen=True)
+class LocusFeatureResult:
+    locus: str
+    protein_count: int
+    protein_set_sha256: str
+    embedding_cache_key: str
+    embedding: np.ndarray
+
+
 def capability_report() -> Dict[str, object]:
     tools = {
-        "kaptive": shutil.which("kaptive"),
-        "blastn": shutil.which("blastn"),
+        "kaptive": find_executable("kaptive"),
+        "blastn": find_executable("blastn"),
         "torch": importlib.util.find_spec("torch") is not None,
         "esm": importlib.util.find_spec("esm") is not None,
     }
@@ -48,7 +80,8 @@ class KaptiveRunner:
         self.timeout_seconds = timeout_seconds
 
     def type_assembly(self, fasta: str) -> KaptiveResult:
-        if not shutil.which(self.executable):
+        executable = find_executable(self.executable)
+        if not executable:
             raise RuntimeError("Kaptive executable is unavailable")
         with tempfile.TemporaryDirectory(prefix="phagex-kaptive-") as directory:
             root = Path(directory)
@@ -56,7 +89,7 @@ class KaptiveRunner:
             output = root / "kaptive.tsv"
             assembly.write_text(fasta, encoding="utf-8")
             subprocess.run(
-                [self.executable, "assembly", self.database, str(assembly), "-o", str(output)],
+                [executable, "assembly", self.database, str(assembly), "-o", str(output)],
                 check=True,
                 timeout=self.timeout_seconds,
                 capture_output=True,
@@ -70,6 +103,79 @@ class KaptiveRunner:
             locus = record.get("Best match locus") or record.get("Best match locus name") or "Unknown"
             confidence = record.get("Confidence") or "Unknown"
             return KaptiveResult(best_match_locus=locus, confidence=confidence, raw_record=record)
+
+    def extract_reference_proteins(self, locus: str) -> LocusProteinSet:
+        if not re.fullmatch(r"KL[0-9]{1,4}", locus):
+            raise ValueError("K locus must use the form KL followed by 1–4 digits")
+        executable = find_executable(self.executable)
+        if not executable:
+            raise RuntimeError("Kaptive executable is unavailable")
+        completed = subprocess.run(
+            [executable, "extract", self.database, "--filter", f"^{locus}$", "--faa", "-"],
+            check=True,
+            timeout=self.timeout_seconds,
+            capture_output=True,
+            text=True,
+        )
+        names, sequences = parse_protein_fasta(completed.stdout)
+        if not sequences:
+            raise ValueError(f"No reference proteins found for {locus}")
+        version = subprocess.run(
+            [executable, "--version"], check=True, capture_output=True, text=True, timeout=30
+        ).stdout.strip()
+        try:
+            import kaptive
+
+            database_path = Path(kaptive.__file__).parent.parent / "reference_database" / "Klebsiella_k_locus_primary_reference.gbk"
+            database_sha256 = file_sha256(database_path)
+        except (ImportError, FileNotFoundError):
+            database_sha256 = "unavailable"
+        normalized = "\n".join(f">{name}\n{sequence}" for name, sequence in zip(names, sequences))
+        return LocusProteinSet(
+            locus=locus,
+            names=names,
+            sequences=sequences,
+            protein_set_sha256=hashlib.sha256(normalized.encode()).hexdigest(),
+            database_sha256=database_sha256,
+            kaptive_version=version,
+        )
+
+
+def file_sha256(path: Path) -> str:
+    value = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+
+def parse_protein_fasta(value: str) -> tuple[List[str], List[str]]:
+    names: List[str] = []
+    sequences: List[str] = []
+    current_name = None
+    parts: List[str] = []
+    for raw_line in value.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith(">"):
+            if current_name is not None:
+                sequences.append("".join(parts).rstrip("*").upper())
+            current_name = line[1:].split()[0]
+            names.append(current_name)
+            parts = []
+        elif current_name is None:
+            raise ValueError("Protein FASTA must begin with a header")
+        else:
+            parts.append(line)
+    if current_name is not None:
+        sequences.append("".join(parts).rstrip("*").upper())
+    if len(names) != len(sequences) or any(not sequence for sequence in sequences):
+        raise ValueError("Protein FASTA contains an empty or malformed record")
+    allowed = re.compile(r"^[ACDEFGHIKLMNPQRSTVWYBXZJUO]+$")
+    if any(not allowed.fullmatch(sequence) for sequence in sequences):
+        raise ValueError("Protein FASTA contains unsupported residues")
+    return names, sequences
 
 
 class EmbeddingCache:
@@ -136,3 +242,29 @@ class ESM2Embedder:
         self.cache.put(key, combined, {"model": ESM2_MODEL, "protein_count": len(cleaned), "dimensions": 1280})
         return combined
 
+
+class ReferenceLocusFeaturePipeline:
+    """Extract canonical K-locus proteins and pass them to the local ESM-2 provider.
+
+    This is a reference-locus feature path, not proof that an uploaded isolate has
+    a complete or identical locus. Isolate-specific CDS extraction remains gated.
+    """
+
+    def __init__(self, extractor: KaptiveRunner, embedder: ESM2Embedder):
+        self.extractor = extractor
+        self.embedder = embedder
+
+    def build(self, locus: str) -> LocusFeatureResult:
+        proteins = self.extractor.extract_reference_proteins(locus)
+        embedding = np.asarray(self.embedder.embed(proteins.sequences), dtype=np.float32)
+        if embedding.shape != (1280,):
+            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected (1280,)")
+        if not np.isfinite(embedding).all():
+            raise ValueError("ESM-2 provider returned non-finite values")
+        return LocusFeatureResult(
+            locus=proteins.locus,
+            protein_count=len(proteins.sequences),
+            protein_set_sha256=proteins.protein_set_sha256,
+            embedding_cache_key=EmbeddingCache.key(proteins.sequences),
+            embedding=embedding,
+        )

@@ -10,12 +10,16 @@
 6. Lazy ESM-2 `esm2_t33_650M_UR50D` provider producing 1,280-dimensional mean-pooled protein embeddings
 7. Digest-keyed SQLite embedding cache that stores vectors and provenance, never raw protein sequence
 8. Fail-closed API/UI status when any required dependency or evidence stage is missing
+9. Kaptive 3.2 reference-locus protein extraction with protein-set and database SHA-256 provenance
+10. A validated reference-locus-to-ESM-2 orchestration contract that rejects malformed vectors
 
 ## Current blocking boundary
 
-Kaptive typing and ESM-2 embedding are implemented as separate providers, but the biological bridge between them remains deliberately open. A production pipeline must extract the K-locus coding sequences selected by Kaptive, translate them with the correct genetic code, validate gene completeness, and pass those proteins to ESM-2. PHAGE-X does not currently substitute whole-genome DNA or arbitrary translated frames for K-locus proteins.
+The canonical reference-locus bridge is implemented: for a strict locus identifier such as `KL107`, Kaptive extracts the curated protein set and PHAGE-X can pass those proteins into the cached ESM-2 provider. `GET /api/reference-locus/KL107` exposes counts and provenance digests without returning raw sequences.
 
-The machine used for this milestone does not have Kaptive, BLAST+, PyTorch, or `fair-esm`. `GET /api/processing-capabilities` reports those exact blockers. `POST /api/inspect-assembly` still performs safe local QC and returns `pipeline_status: blocked`; it does not silently fall back to the demo hash representation.
+This does not prove that an uploaded isolate contains a complete, identical reference locus. The production isolate path must still map the Kaptive call back to isolate-specific coding sequences, validate translation and gene completeness, confirm the species, and validate parity against a reference set. PHAGE-X does not substitute whole-genome DNA or arbitrary translated frames for K-locus proteins.
+
+The development environment has Kaptive 3.2 installed. BLAST+, PyTorch, and `fair-esm` remain unavailable, so `GET /api/processing-capabilities` reports those exact blockers. `POST /api/inspect-assembly` still performs safe local QC and returns `pipeline_status: blocked`; it does not silently fall back to the demo hash representation.
 
 ## Installation boundary
 
@@ -26,9 +30,8 @@ Kaptive 3.2 is listed in `backend/requirements-sequence.txt`, while BLAST+ must 
 - Reference assemblies with accepted Kaptive results
 - Exact comparison to PhageHostLearn preprocessing and pooling
 - Unit fixtures for Kaptive TSV variants
-- Protein extraction and translation validation
+- Isolate-specific CDS extraction and translation validation
 - CPU/GPU parity tolerance
 - Cache concurrency and corruption tests
 - Resource limits, job queue, cancellation, and timeouts
 - Species confirmation before K-locus interpretation
-

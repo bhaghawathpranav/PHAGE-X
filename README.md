@@ -15,6 +15,7 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Greedy cocktail construction using compatibility + diversity − redundancy
 - Responsive React UI, FastAPI schema/docs, and API tests
 - Separate real-model benchmark mode restricted to held-out PhageHostLearn isolates
+- Kaptive-backed KL reference-protein extraction and a cached ESM-2 feature interface
 
 ## Run locally
 
@@ -48,7 +49,7 @@ The dataset is deliberately synthetic-compatible: it supports a reproducible pro
 
 The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
-The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/BLAST+/ESM-2 capabilities without storing the sequence or falling back silently. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
+The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/BLAST+/ESM-2 capabilities without storing the sequence or falling back silently. The API can extract fingerprinted canonical proteins for a strict K-locus reference and hand them to the cached ESM-2 interface; isolate-specific CDS extraction remains fail-closed. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
 
 ## Production path
 
