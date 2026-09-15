@@ -76,6 +76,16 @@ docker compose up --build
 
 The data fetch is checksum-pinned to the public PhageHostLearn Zenodo release.
 
+Run the complete download, training, calibration, and evaluation workflow:
+
+```bash
+./scripts/train_and_evaluate.sh
+```
+
+The untouched host-disjoint test set reports ROC-AUC, average precision (PR-AUC), Brier score, accuracy, balanced accuracy, precision, recall, specificity, F1, Matthews correlation, the complete confusion matrix, and top-3/top-5 per-host recall. The classification threshold is chosen from validation data only. Host-bootstrap confidence intervals and repeated host-group holdouts are written to `backend/artifacts/model_card.json`.
+
+The equivalent manual commands are:
+
 ```bash
 .venv/bin/pip install -r backend/requirements-ml.txt
 .venv/bin/python scripts/fetch_phagehostlearn.py
