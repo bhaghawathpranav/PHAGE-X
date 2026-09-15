@@ -21,8 +21,19 @@ async function parse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return await parse<T>(await fetch(`${API}${path}`, init));
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("The PHAGE-X backend is offline. Start the local API, then reload this page.");
+    }
+    throw error;
+  }
+}
+
 export async function getIsolates(): Promise<Isolate[]> {
-  return parse(await fetch(`${API}/api/isolates`));
+  return request("/api/isolates");
 }
 
 export async function analyze(payload: {
@@ -32,79 +43,77 @@ export async function analyze(payload: {
   demo_fasta?: boolean;
   cocktail_size: number;
 }): Promise<Analysis> {
-  return parse(
-    await fetch(`${API}/api/analyze`, {
+  return request(
+    "/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }),
+    },
   );
 }
 
 export async function getResearchIsolates(): Promise<string[]> {
-  return parse(await fetch(`${API}/api/research-isolates`));
+  return request("/api/research-isolates");
 }
 
 export async function getResearchModelStatus(): Promise<ResearchModelStatus> {
-  return parse(await fetch(`${API}/api/research-model`));
+  return request("/api/research-model");
 }
 
 export async function rankResearchHost(host_id: string): Promise<ResearchRank> {
-  return parse(
-    await fetch(`${API}/api/research-rank`, {
+  return request(
+    "/api/research-rank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ host_id, limit: 20 }),
-    }),
+    },
   );
 }
 
 export async function getProcessingCapabilities(): Promise<ProcessingCapabilities> {
-  return parse(await fetch(`${API}/api/processing-capabilities`));
+  return request("/api/processing-capabilities");
 }
 
 export async function inspectAssembly(fasta: string): Promise<AssemblyInspection> {
-  return parse(
-    await fetch(`${API}/api/inspect-assembly`, {
+  return request(
+    "/api/inspect-assembly", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta }),
-    }),
+    },
   );
 }
 
 export async function extractIsolateLocus(fasta: string): Promise<IsolateLocusExtraction> {
-  return parse(
-    await fetch(`${API}/api/extract-isolate-locus`, {
+  return request(
+    "/api/extract-isolate-locus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta }),
-    }),
+    },
   );
 }
 
 export async function embedIsolateLocus(fasta: string): Promise<IsolateEmbedding> {
-  return parse(
-    await fetch(`${API}/api/embed-isolate-locus`, {
+  return request(
+    "/api/embed-isolate-locus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta }),
-    }),
+    },
   );
 }
 
 export async function rankNovelIsolateInBackground(fasta: string): Promise<NovelIsolateRank> {
-  const job = await parse<{ job_id: string }>(
-    await fetch(`${API}/api/jobs/novel-rank`, {
+  const job = await request<{ job_id: string }>(
+    "/api/jobs/novel-rank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fasta, limit: 20 }),
-    }),
+    },
   );
   for (let attempt = 0; attempt < 800; attempt += 1) {
-    const status = await parse<{ status: string; result?: NovelIsolateRank; error?: string }>(
-      await fetch(`${API}/api/jobs/${job.job_id}`),
-    );
+    const status = await request<{ status: string; result?: NovelIsolateRank; error?: string }>(`/api/jobs/${job.job_id}`);
     if (status.status === "succeeded" && status.result) return status.result;
     if (status.status === "failed" || status.status === "cancelled") {
       throw new Error(status.error || `Feature job ${status.status}.`);

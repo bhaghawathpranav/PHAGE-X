@@ -19,11 +19,203 @@ import {
 import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
-function DnaBackdrop() {
+type DnaPoint = { x: number; y: number; z: number };
+type DnaItem =
+  | { z: number; kind: "strand"; a: DnaPoint; b: DnaPoint; strand: number }
+  | { z: number; kind: "dot"; point: DnaPoint; strand: number }
+  | { z: number; kind: "bond"; a: DnaPoint; b: DnaPoint; index: number };
+
+function DnaBackdrop({ controls = false }: { controls?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef<HTMLSpanElement>(null);
+  const currentRef = useRef<HTMLSpanElement>(null);
+  const reducedMotionRef = useRef(false);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotionRef.current = media.matches;
+    pausedRef.current = media.matches;
+    setPaused(media.matches);
+    const onMotionPreference = (event: MediaQueryListEvent) => {
+      reducedMotionRef.current = event.matches;
+      if (event.matches) {
+        pausedRef.current = true;
+        setPaused(true);
+      }
+    };
+    media.addEventListener("change", onMotionPreference);
+    return () => media.removeEventListener("change", onMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) return;
+    const canvas = canvasElement;
+    const renderingContext = canvas.getContext("2d");
+    if (!renderingContext) return;
+    const context = renderingContext;
+
+    let width = 0;
+    let height = 0;
+    let scroll = window.scrollY;
+    let smooth = scroll;
+    let angle = 0.4;
+    let last = performance.now();
+    let animationFrame = 0;
+    const stageTop = (element: HTMLElement) => element.getBoundingClientRect().top + window.scrollY;
+    const sections = [...document.querySelectorAll<HTMLElement>("[data-stage]")]
+      .sort((first, second) => stageTop(first) - stageTop(second));
+
+    function resize() {
+      const density = Math.min(window.devicePixelRatio || 1, 2);
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      canvas.width = width * density;
+      canvas.height = height * density;
+      context.setTransform(density, 0, 0, density, 0, 0);
+    }
+
+    function updateScroll() {
+      scroll = window.scrollY;
+      if (progressRef.current) {
+        const available = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        progressRef.current.style.width = `${Math.min(100, (100 * scroll) / available)}%`;
+      }
+    }
+
+    function line(a: DnaPoint, b: DnaPoint, color: string, weight: number) {
+      context.beginPath();
+      context.moveTo(a.x, a.y);
+      context.lineTo(b.x, b.y);
+      context.strokeStyle = color;
+      context.lineWidth = weight;
+      context.lineCap = "round";
+      context.stroke();
+    }
+
+    function sphere(point: DnaPoint, radius: number, color: string, edge: string) {
+      const gradient = context.createRadialGradient(point.x - radius * 0.3, point.y - radius * 0.35, 0, point.x, point.y, radius);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(0.45, color);
+      gradient.addColorStop(1, edge);
+      context.beginPath();
+      context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      context.fillStyle = gradient;
+      context.fill();
+    }
+
+    function draw(time: number) {
+      const delta = Math.min((time - last) / 1000, 0.05);
+      last = time;
+      if (!pausedRef.current) angle += delta * 0.16;
+      smooth += (scroll - smooth) * 0.07;
+      let stage = 0;
+      for (let index = 1; index < sections.length; index += 1) {
+        if (smooth + height * 0.5 > stageTop(sections[index])) stage = index;
+      }
+      if (currentRef.current) currentRef.current.textContent = String(stage + 1).padStart(2, "0");
+
+      const separationAnchor = sections[3] ? stageTop(sections[3]) : Number.POSITIVE_INFINITY;
+      const separation = Math.max(0, Math.min(1, (smooth - separationAnchor + height * 0.65) / (height * 0.85)));
+      context.clearRect(0, 0, width, height);
+      const radius = Math.min(width * 0.22, 180);
+      const centerX = width * 0.52;
+      const centerY = height * 0.51;
+      const step = Math.min(height * 0.033, 28);
+      const count = 34;
+      const tilt = -0.21;
+      const rotation = angle + (reducedMotionRef.current ? 0 : smooth * 0.0015);
+      const points: [DnaPoint[], DnaPoint[]] = [[], []];
+      const bonds: Array<{ a: DnaPoint; b: DnaPoint; index: number }> = [];
+
+      function point(index: number, strand: number): DnaPoint {
+        const theta = index * 0.43 + rotation + strand * Math.PI;
+        const vertical = (index - (count - 1) / 2) * step;
+        const spread = separation * radius * 0.75 * (strand ? 1 : -1);
+        const horizontal = Math.sin(theta) * radius + spread;
+        const depth = Math.cos(theta);
+        return {
+          x: centerX + horizontal * Math.cos(tilt) - vertical * Math.sin(tilt),
+          y: centerY + horizontal * Math.sin(tilt) + vertical * Math.cos(tilt),
+          z: depth,
+        };
+      }
+
+      for (let index = 0; index < count; index += 1) {
+        for (let strand = 0; strand < 2; strand += 1) points[strand].push(point(index, strand));
+        bonds.push({ a: points[0][index], b: points[1][index], index });
+      }
+
+      const items: DnaItem[] = [];
+      for (let strand = 0; strand < 2; strand += 1) {
+        for (let index = 0; index < count; index += 1) {
+          const current = points[strand][index];
+          if (index < count - 1) items.push({ z: (current.z + points[strand][index + 1].z) / 2, kind: "strand", a: current, b: points[strand][index + 1], strand });
+          items.push({ z: current.z, kind: "dot", point: current, strand });
+        }
+      }
+      for (const bond of bonds) items.push({ z: 0, kind: "bond", ...bond });
+      items.sort((a, b) => a.z - b.z);
+
+      for (const item of items) {
+        if (item.kind === "strand") {
+          const light = (item.z + 1) / 2;
+          line(item.a, item.b, item.strand ? `rgba(225,58,151,${0.35 + light * 0.65})` : `rgba(125,50,204,${0.35 + light * 0.65})`, 3.5 + light * 2);
+        } else if (item.kind === "dot") {
+          const light = (item.z + 1) / 2;
+          sphere(item.point, 3.5 + light * 3, item.strand ? `rgb(${216 + light * 30},${72 + light * 50},${148 + light * 40})` : `rgb(${123 + light * 45},${55 + light * 45},${195 + light * 45})`, item.strand ? "#b52377" : "#6528a3");
+        } else {
+          const middle = { x: (item.a.x + item.b.x) / 2, y: (item.a.y + item.b.y) / 2, z: 0 };
+          const gap = separation * 0.27;
+          const start = { x: middle.x + (item.a.x - middle.x) * gap, y: middle.y + (item.a.y - middle.y) * gap, z: 0 };
+          const end = { x: middle.x + (item.b.x - middle.x) * gap, y: middle.y + (item.b.y - middle.y) * gap, z: 0 };
+          line(item.a, start, "rgba(125,50,204,.52)", 2);
+          line(end, item.b, "rgba(225,58,151,.52)", 2);
+          if (stage === 2 && item.index % 3 === 0) {
+            const letters = item.index % 2 ? ["A", "T"] : ["C", "G"];
+            context.font = "11px monospace";
+            context.textAlign = "center";
+            context.fillStyle = "#792cce";
+            context.fillText(letters[0], item.a.x * 0.64 + middle.x * 0.36, item.a.y * 0.64 + middle.y * 0.36 - 9);
+            context.fillStyle = "#c52c86";
+            context.fillText(letters[1], item.b.x * 0.64 + middle.x * 0.36, item.b.y * 0.64 + middle.y * 0.36 - 9);
+          }
+        }
+      }
+      animationFrame = requestAnimationFrame(draw);
+    }
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("scroll", updateScroll, { passive: true });
+    resize();
+    updateScroll();
+    animationFrame = requestAnimationFrame(draw);
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("scroll", updateScroll);
+      cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  function toggleMotion() {
+    const next = !pausedRef.current;
+    pausedRef.current = next;
+    setPaused(next);
+  }
+
   return (
-    <div className="dna-scene" aria-hidden="true">
-      <img src="/assets/dna-hero.png" alt="" />
-    </div>
+    <>
+      <div className="dna-canvas-visual" aria-hidden="true"><canvas id="dna" ref={canvasRef} /></div>
+      {controls && <>
+        <div className="dna-progress" aria-hidden="true"><span id="progress-bar" ref={progressRef} /></div>
+        <div className="dna-chapter" aria-label="Current scroll chapter"><span id="current" ref={currentRef}>01</span><i>/</i><span>05</span></div>
+        <button id="motion" className="dna-motion" type="button" aria-pressed={paused} onClick={toggleMotion}>
+          {paused ? <>Resume motion <span>▶</span></> : <>Pause motion <span>Ⅱ</span></>}
+        </button>
+      </>}
+    </>
   );
 }
 
@@ -324,9 +516,9 @@ export default function App() {
   return (
     <div className="app">
       <Header />
-      <DnaBackdrop />
+      <DnaBackdrop controls />
       <main className="page-shell hero-layout">
-        <section className="hero-stage">
+        <section className="hero-stage" data-stage="hero">
           <div className="hero-copy">
             <span className="eyebrow">AI-GUIDED PHAGE DISCOVERY</span>
             <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
@@ -343,19 +535,19 @@ export default function App() {
         </section>
 
         <section className="scroll-story" aria-label="How PHAGE-X works">
-          <article className="story-card">
+          <article className="story-card" data-stage="represent">
             <span>01 / REPRESENT</span>
             <h2>Read the bacterial surface.</h2>
             <p>The sequence pipeline checks the assembly, confirms the species, identifies the capsule locus, and turns its proteins into comparable features.</p>
             <small>Input → assembly QC → capsule-locus proteins → embedding</small>
           </article>
-          <article className="story-card">
+          <article className="story-card" data-stage="rank">
             <span>02 / RANK</span>
             <h2>Search fewer candidates.</h2>
             <p>The compatibility model compares the isolate representation with receptor-binding-protein features and orders the available phage catalog.</p>
             <small>{modelStatus ? `${modelStatus.candidate_phages} catalog phages · ${Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}% internal top-5 recall` : "Explainable catalog ranking"}</small>
           </article>
-          <article className="story-card">
+          <article className="story-card" data-stage="combine">
             <span>03 / COMBINE</span>
             <h2>Avoid redundant choices.</h2>
             <p>The shortlist favors individually strong candidates that add receptor and family diversity instead of repeating the same profile.</p>
@@ -363,7 +555,7 @@ export default function App() {
           </article>
         </section>
 
-        <section className="input-panel panel">
+        <section className="input-panel panel" data-stage="analyse">
           <div className="panel-top"><span>01</span><div><h2>Choose your input</h2></div></div>
           <div className="tabs">
             <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>XGBoost sample</button>
