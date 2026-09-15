@@ -242,7 +242,8 @@ export default function App() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const progress = Math.min(window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1);
-        const hue = 186 + progress * 82;
+        // Move from Apple blue to a restrained violet as the story progresses.
+        const hue = 211 + progress * 45;
         document.documentElement.style.setProperty("--scroll-y", `${window.scrollY}`);
         document.documentElement.style.setProperty("--scroll-progress", `${progress}`);
         document.documentElement.style.setProperty("--mint", `hsl(${hue} 88% 66%)`);
