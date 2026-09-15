@@ -55,3 +55,39 @@ def build_feature_input(
         "bacterial_embedding": list(bacterial_embedding),
         "phages": phages,
     }
+
+
+from backend.services.data_loader import (
+    load_bacterial_embedding,
+    load_phage_embeddings,
+)
+
+
+def prepare_features_for_prediction(
+    genome_fasta: str,
+    bacterium_id: str | None = None,
+) -> Dict[str, object]:
+    """
+    Prepare the complete feature structure for the ML prediction layer.
+
+    Loads precomputed bacterial and phage ESM-2 embeddings and combines
+    them with the validated genome information.
+    """
+
+    resolved_id = get_bacterium_id(
+        genome_fasta,
+        bacterium_id,
+    )
+
+    bacterial_embedding = load_bacterial_embedding(
+        resolved_id
+    )
+
+    phage_embeddings = load_phage_embeddings()
+
+    return build_feature_input(
+        genome_fasta=genome_fasta,
+        bacterial_embedding=bacterial_embedding,
+        phage_embeddings=phage_embeddings,
+        bacterium_id=resolved_id,
+    )
