@@ -241,8 +241,12 @@ export default function App() {
     const updateScroll = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        const progress = Math.min(window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1);
+        const hue = 186 + progress * 82;
         document.documentElement.style.setProperty("--scroll-y", `${window.scrollY}`);
-        document.documentElement.style.setProperty("--scroll-progress", `${Math.min(window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1)}`);
+        document.documentElement.style.setProperty("--scroll-progress", `${progress}`);
+        document.documentElement.style.setProperty("--mint", `hsl(${hue} 88% 66%)`);
+        document.documentElement.style.setProperty("--accent-rgb", progress < 0.5 ? "52, 211, 255" : "156, 120, 255");
       });
     };
     const observer = new IntersectionObserver((entries) => {
