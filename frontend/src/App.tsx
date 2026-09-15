@@ -392,7 +392,6 @@ export default function App() {
                   <div><span>Sequence type</span><strong>{active.sequence_type}</strong></div>
                   <div><span>Capsule locus</span><strong>{active.k_locus}</strong></div>
                 </div>
-                <div className="resistance-block"><div><span>Resistance profile</span><small>Context only. These labels do not calculate compatibility.</small></div><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag} resistant</span>)}</div></div>
               </div>}
             </div>
           ) : mode === "upload" ? (
