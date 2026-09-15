@@ -48,3 +48,35 @@ footer{height:50px;border-top:1px solid var(--line);display:flex;align-items:cen
 @media(max-width:900px){.hero-layout{grid-template-columns:1fr;gap:36px}.hero-copy{padding-top:25px}.hero-copy h1{font-size:52px}.input-panel{max-width:580px}.result-grid{grid-template-columns:1fr}.results-head{align-items:flex-start;gap:20px}.header-meta{display:none}.dna-scene{right:-90px;opacity:.28;width:280px}}
 @media(max-width:600px){.page-shell{padding-left:18px;padding-right:18px}.hero-layout{padding-top:36px}.hero-copy h1{font-size:42px}.flow-strip{gap:8px;justify-content:space-between}.flow-strip>svg{width:12px}.input-panel{padding:21px}.results-head{flex-direction:column}.results-head h1{font-size:34px}.cocktail-map{flex-direction:column;align-items:center;gap:18px}.member-wrap{width:100%}.connector{display:none}.ranking-head{display:none}.phage-summary{grid-template-columns:34px 1fr 52px 17px}.band{display:none}.phage-details{grid-template-columns:1fr;padding:18px}.result-grid{display:block}.isolate-card{margin-top:18px}.header-left{gap:12px}.header-back{padding-right:12px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.dna-helix,.dna-rung{animation:none}.dna-scene{transform:none}.scroll-reveal{opacity:1;transform:none;transition:none}}
+
+/* Refined laboratory product system */
+:root{--mint:#63d9ae;--ink:#08110f;--panel:#0d1815;--muted:#8da099;--line:#20302b}
+body{background:#08110f;color:#e7eeeb}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.014) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 72%)}
+header{height:64px;padding:0 max(4vw,24px);background:rgba(8,17,15,.96);border-color:#1d2b27;backdrop-filter:blur(10px)}
+.brand-mark{gap:9px}.brand-mark strong{font-size:15px;letter-spacing:.06em}.header-meta{font-size:9px}.header-back{font-weight:600}
+.page-shell{max-width:1180px}
+.hero-layout{grid-template-columns:minmax(0,1fr) 480px;gap:72px;min-height:calc(100vh - 108px);padding-top:48px;padding-bottom:48px}
+.hero-copy{padding-bottom:0}.hero-copy h1,.results-head h1{font-family:Inter,Avenir,"Segoe UI",system-ui,sans-serif;font-size:clamp(44px,4.8vw,66px);line-height:1.02;letter-spacing:-.045em;font-weight:590;margin:18px 0}.hero-copy h1 em,.results-head h1 em{font-family:inherit;font-style:normal;font-weight:590}
+.lead{max-width:530px;font-size:16px;line-height:1.55;color:#a4b3ae}
+.eyebrow,.step-label{font-family:"DM Mono",ui-monospace,monospace;letter-spacing:.1em}.eyebrow{font-size:10px}
+.flow-strip{margin:34px 0;gap:16px}.flow-strip div{font-size:9px;gap:6px}.flow-strip div svg{width:19px}.guardrail{padding-top:4px}.guardrail strong{font-size:12px;font-weight:550}
+.dna-scene{right:4vw;top:72px;width:min(23vw,300px);height:calc(100vh - 90px);opacity:.16;filter:none}.dna-glow{display:none}.dna-strand{stroke-width:2}.dna-rung circle{r:3;filter:none}.dna-rung line{stroke:rgba(127,224,187,.25)}
+.panel{background:#0d1815;border:1px solid #22312d;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.22);backdrop-filter:none}
+.input-panel{padding:26px}.panel-top{padding-bottom:18px}.panel-top h2{font-size:19px;font-weight:600;margin:0}.panel-top>span{font-size:10px}
+.tabs{margin:18px 0;background:#09120f;border:1px solid #192722;border-radius:8px}.tabs button{min-height:37px;border-radius:5px;font-size:10px}.tabs button.active{background:#1a3129;box-shadow:none}
+.case-option{border-color:#20302b;background:#0a1411;border-radius:7px;padding:12px 13px;transition:border-color .15s,background .15s}.case-option:hover{border-color:#365047}.case-option.selected{background:#10241d;border-color:#4a9f80}.case-detail{background:transparent;padding:7px 0 0}.tag-list span{background:#172923;border:1px solid #203a31;border-radius:4px}
+.size-picker{border-top:1px solid #20302b;padding-top:17px;margin-top:18px}.size-picker button{border-radius:5px}.run-button{border-radius:6px;min-height:46px;transition:background .15s,transform .15s}.run-button:hover{background:#75e5bc;box-shadow:none}.privacy{margin-top:9px}
+.upload-area textarea,.research-picker select{border-radius:6px;border-color:#263832}.pipeline-state,.inspection-result,.inspect-button{border-radius:6px}.inspect-button{text-align:left;padding:10px 12px}
+.results{padding-top:42px}.results-head{margin-bottom:22px;align-items:center}.results-head h1{font-size:38px;margin:10px 0 6px}.results-head p{font-size:10px}
+.validation-banner{border:1px solid #244237;border-left:3px solid var(--mint);border-radius:6px;background:#0e211a;padding:10px 13px}
+.result-grid{gap:14px}.cocktail-card,.isolate-card,.ranking-panel{padding:22px}.panel-heading h2{font-size:19px}.score-ring{transform:scale(.88)}
+.cocktail-map{padding:30px 0}.phage-orb{width:54px;height:54px;background:#10231c}.metric-row strong{font-size:15px}.metric-row span{font-size:8px}
+.isolate-card h3{font-size:21px;margin-bottom:18px}.profile-line{font-size:10px;padding:10px 0}.model-chip{margin-top:20px}
+.ranking-panel{margin-top:14px}.panel-heading.compact{margin-bottom:13px}.phage-summary{padding:13px 10px}.phage-row:first-of-type{border-top:0}.phage-summary:hover{background:#11201b}.phage-details{background:#09130f}
+.blocked-panel{border-color:#4a4029;background:#151710;box-shadow:none}.blocked-panel h2{font-size:17px}
+.scroll-reveal{transform:translateY(14px);transition:opacity .45s ease,transform .55s ease}.scroll-reveal.is-visible{transform:none}
+button:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+footer{height:44px;border-color:#1d2b27}
+@media(max-width:900px){.hero-layout{grid-template-columns:1fr;gap:30px}.input-panel{max-width:none}.dna-scene{right:-70px;width:240px;opacity:.1}}
+@media(max-width:600px){header{height:58px}.page-shell{padding-left:16px;padding-right:16px}.hero-layout{padding-top:30px}.hero-copy h1{font-size:40px}.flow-strip{margin:26px 0}.input-panel{padding:18px}.results{padding-top:28px}.results-head h1{font-size:30px}.cocktail-card,.isolate-card,.ranking-panel{padding:18px}.validation-banner{font-size:9px}.header-meta{display:none}}
