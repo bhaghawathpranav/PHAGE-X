@@ -11,7 +11,11 @@ def parse_fasta(fasta_text: str) -> Tuple[str, str]:
     Returns:
         (header, sequence)
     """
-    lines = [line.strip() for line in fasta_text.strip().splitlines() if line.strip()]
+    lines = [
+        line.strip()
+        for line in fasta_text.strip().splitlines()
+        if line.strip()
+    ]
 
     if not lines:
         raise ValueError("Genome input is empty.")
@@ -43,3 +47,20 @@ def validate_genome(fasta_text: str) -> bool:
     """Return True if the genome is valid FASTA."""
     parse_fasta(fasta_text)
     return True
+
+
+def get_bacterium_id(
+    fasta_text: str,
+    bacterium_id: str | None = None,
+) -> str:
+    """
+    Return the bacterium identifier.
+
+    Uses the explicitly supplied ID when available.
+    Otherwise uses the FASTA header.
+    """
+    if bacterium_id and bacterium_id.strip():
+        return bacterium_id.strip()
+
+    header, _ = parse_fasta(fasta_text)
+    return header
