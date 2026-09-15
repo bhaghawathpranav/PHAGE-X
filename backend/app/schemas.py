@@ -2,6 +2,8 @@ from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from .limits import ASSEMBLY_FASTA_MAX_BYTES, DEMO_FASTA_MAX_BYTES
+
 
 class IsolateSummary(BaseModel):
     id: str
@@ -24,7 +26,7 @@ class SequenceQC(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     isolate_id: Optional[str] = None
-    fasta: Optional[str] = Field(default=None, max_length=5_000_000)
+    fasta: Optional[str] = Field(default=None, max_length=DEMO_FASTA_MAX_BYTES)
     isolate_name: Optional[str] = Field(default=None, max_length=100)
     demo_fasta: bool = False
     cocktail_size: int = Field(default=3, ge=2, le=3)
@@ -128,7 +130,7 @@ class ResearchRankResponse(BaseModel):
 
 
 class AssemblyInspectRequest(BaseModel):
-    fasta: str = Field(min_length=100, max_length=15_000_000)
+    fasta: str = Field(min_length=100, max_length=ASSEMBLY_FASTA_MAX_BYTES)
 
 
 class AssemblyInspectResponse(BaseModel):
@@ -161,7 +163,7 @@ class LocusProteinResponse(BaseModel):
 
 
 class IsolateLocusRequest(BaseModel):
-    fasta: str = Field(min_length=100, max_length=15_000_000)
+    fasta: str = Field(min_length=100, max_length=ASSEMBLY_FASTA_MAX_BYTES)
 
 
 class IsolateLocusResponse(BaseModel):
@@ -208,7 +210,7 @@ class IsolateEmbeddingResponse(BaseModel):
 
 
 class NovelIsolateRankRequest(BaseModel):
-    fasta: str = Field(min_length=100, max_length=15_000_000)
+    fasta: str = Field(min_length=100, max_length=ASSEMBLY_FASTA_MAX_BYTES)
     limit: int = Field(default=20, ge=1, le=105)
 
 

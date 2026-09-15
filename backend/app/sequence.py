@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from typing import List
 
 
-MAX_FASTA_BYTES = 5_000_000
+from .limits import DEMO_FASTA_MAX_BYTES
+
+
+MAX_FASTA_BYTES = DEMO_FASTA_MAX_BYTES
 
 
 @dataclass(frozen=True)
@@ -51,4 +54,3 @@ def parse_single_fasta(fasta: str) -> ParsedSequence:
         status="review" if warnings else "pass",
         warnings=warnings,
     )
-

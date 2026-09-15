@@ -63,6 +63,8 @@ The **Real benchmark** tab is different from the synthetic demo. It loads the ha
 
 The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. With the complete local toolchain, an uploaded assembly is species-confirmed, K-locus typed, embedded, distribution-checked, and ranked against 105 released phage RBP profiles. Real cocktail construction remains blocked until independent phage safety and diversity metadata are available. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
 
+The legacy synthetic single-record FASTA route is intentionally capped at 5 MB; the real multi-contig assembly pipeline accepts up to 15 MB. Reviewed phage evidence is validated against a strict versioned schema. Use `scripts/migrate_reviewed_evidence.py SOURCE OUTPUT` to create a validated migrated copy without overwriting the source registry.
+
 To enable offline ESM-2 extraction, install `backend/requirements-embedding.txt`, run `scripts/fetch_esm2_checkpoint.py` once, and use `scripts/precompute_esm2.py` to warm canonical locus vectors. The 2.60 GB checkpoint is kept in the local Torch cache and verified against `backend/data/esm2/manifest.json`; it is not stored in Git.
 
 ## Production path

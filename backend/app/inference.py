@@ -24,6 +24,7 @@ from .sequence import parse_single_fasta
 
 MODEL_NAME = "PX-Linear v0.1 (frozen demo baseline)"
 DISCLAIMER = "For laboratory validation only — not for clinical decision-making or treatment selection."
+MAX_EXHAUSTIVE_COCKTAIL_CANDIDATES = 60
 
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
@@ -121,6 +122,11 @@ def _pair_diversity(a: Dict[str, Any], b: Dict[str, Any]) -> float:
 def _build_cocktail(
     ranked: List[RankedPhage], phages_by_id: Dict[str, Dict[str, Any]], size: int
 ) -> CocktailCandidate:
+    if len(ranked) > MAX_EXHAUSTIVE_COCKTAIL_CANDIDATES:
+        raise ValueError(
+            f"Exhaustive cocktail search supports at most {MAX_EXHAUSTIVE_COCKTAIL_CANDIDATES} "
+            "ranked phages; prefilter the catalog before combination scoring"
+        )
     best = None
     for selected_tuple in itertools.combinations(ranked, size):
         families = {phages_by_id[item.id]["family"] for item in selected_tuple}
