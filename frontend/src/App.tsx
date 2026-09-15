@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Check,
   ChevronDown,
   CircleDot,
   Dna,
   FlaskConical,
-  Info,
   Layers3,
   LoaderCircle,
   Microscope,
@@ -42,7 +42,6 @@ function DnaBackdrop() {
           </g>
         ))}
       </svg>
-      <span className="dna-particle p1" /><span className="dna-particle p2" /><span className="dna-particle p3" />
     </div>
   );
 }
@@ -104,7 +103,7 @@ function PhageRow({ phage, rank }: { phage: RankedPhage; rank: number }) {
   );
 }
 
-function Results({ result, onReset }: { result: Analysis; onReset: () => void }) {
+function Results({ result }: { result: Analysis }) {
   return (
     <main className="results page-shell">
       <div className="results-head">
@@ -113,7 +112,6 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
           <h1>Candidate landscape for <em>{result.isolate.name}</em></h1>
           <p>{result.isolate.organism} · {result.isolate.sequence_type} · {result.isolate.k_locus}</p>
         </div>
-        <button className="ghost-button" onClick={onReset}>New analysis</button>
       </div>
 
       <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
@@ -138,7 +136,6 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
             <div><span>Diversity</span><strong>{Math.round(result.cocktail.diversity * 100)}%</strong></div>
             <div><span>Redundancy</span><strong>{Math.round(result.cocktail.redundancy * 100)}%</strong></div>
           </div>
-          <p className="method-note"><Info size={15} /> Compatibility + diversity − redundancy.</p>
         </article>
 
         <aside className="panel isolate-card">
@@ -169,15 +166,11 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
         {result.ranked_phages.map((phage, index) => <PhageRow phage={phage} rank={index + 1} key={phage.id} />)}
       </section>
 
-      <section className="limitations">
-        <AlertTriangle size={20} />
-        <div><h3>Limits</h3><p>Demo ranking only. Laboratory validation is required.</p></div>
-      </section>
     </main>
   );
 }
 
-function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: () => void }) {
+function ResearchResults({ result }: { result: ResearchRank }) {
   return (
     <main className="results page-shell">
       <div className="results-head">
@@ -186,7 +179,6 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
           <h1>Real-model ranking for <em>{result.host_id}</em></h1>
           <p>{result.feature_source} · {result.model_version}</p>
         </div>
-        <button className="ghost-button" onClick={onReset}>New analysis</button>
       </div>
       <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
       <section className="panel blocked-panel">
@@ -209,10 +201,10 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
   );
 }
 
-function NovelResults({ result, onReset }: { result: NovelIsolateRank; onReset: () => void }) {
+function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
-      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.model_version} · {result.species_ani_percent.toFixed(2)}% species ANI</p></div><button className="ghost-button" onClick={onReset}>New analysis</button></div>
+      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.model_version} · {result.species_ani_percent.toFixed(2)}% species ANI</p></div></div>
       <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
       <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2><p>Real cocktails require reviewed genomic metadata and laboratory confirmation.</p></div></section>
       <section className="panel ranking-panel">
@@ -220,7 +212,6 @@ function NovelResults({ result, onReset }: { result: NovelIsolateRank; onReset: 
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
         {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
       </section>
-      <section className="limitations"><Info size={20} /><div><h3>Input check</h3><p>{result.distribution_status.replaceAll("-", " ")} · similarity {result.nearest_reference_cosine.toFixed(3)}</p></div></section>
     </main>
   );
 }
@@ -258,7 +249,7 @@ export default function App() {
       entries.forEach((entry) => entry.target.classList.toggle("is-visible", entry.isIntersecting));
     }, { threshold: 0.12 });
     const timer = window.setTimeout(() => {
-      document.querySelectorAll(".panel, .results-head, .validation-banner, .limitations, .flow-strip").forEach((element) => {
+      document.querySelectorAll(".panel, .results-head, .validation-banner, .flow-strip").forEach((element) => {
         element.classList.add("scroll-reveal");
         observer.observe(element);
       });
@@ -299,9 +290,9 @@ export default function App() {
     }
   }
 
-  if (result) return <><DnaBackdrop /><Header /><Results result={result} onReset={() => setResult(null)} /></>;
-  if (researchResult) return <><DnaBackdrop /><Header /><ResearchResults result={researchResult} onReset={() => setResearchResult(null)} /></>;
-  if (novelResult) return <><DnaBackdrop /><Header /><NovelResults result={novelResult} onReset={() => setNovelResult(null)} /></>;
+  if (result) return <><DnaBackdrop /><Header onBack={() => setResult(null)} /><Results result={result} /></>;
+  if (researchResult) return <><DnaBackdrop /><Header onBack={() => setResearchResult(null)} /><ResearchResults result={researchResult} /></>;
+  if (novelResult) return <><DnaBackdrop /><Header onBack={() => setNovelResult(null)} /><NovelResults result={novelResult} /></>;
 
   return (
     <div className="app">
@@ -309,7 +300,7 @@ export default function App() {
       <Header />
       <main className="page-shell hero-layout">
         <section className="hero-copy">
-          <span className="eyebrow"><span className="live-dot" /> OFFLINE RESEARCH PROTOTYPE</span>
+          <span className="eyebrow">OFFLINE RESEARCH PROTOTYPE</span>
           <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
           <p className="lead">Rank phages. Build complementary cocktails. Validate in the lab.</p>
           <div className="flow-strip">
@@ -414,10 +405,13 @@ export default function App() {
   );
 }
 
-function Header() {
+function Header({ onBack }: { onBack?: () => void }) {
   return (
     <header>
-      <div className="brand-mark"><Dna size={20} /><strong>PHAGE<span>—X</span></strong></div>
+      <div className="header-left">
+        {onBack && <button className="header-back" onClick={onBack}><ArrowLeft size={16} /> Back</button>}
+        <div className="brand-mark"><Dna size={20} /><strong>PHAGE<span>—X</span></strong></div>
+      </div>
       <div className="header-meta"><span>K. pneumoniae</span><i /><span>v0.1</span></div>
     </header>
   );
