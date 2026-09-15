@@ -62,6 +62,20 @@ function ExportResult({ data, name }: { data: unknown; name: string }) {
   return <button className="result-export" onClick={download}><Download size={14} /> Export results</button>;
 }
 
+function EvidenceReviewNotice() {
+  return (
+    <section className="evidence-note" role="note" aria-label="Combination evidence status">
+      <div className="evidence-note-icon"><Layers3 size={20} /></div>
+      <div className="evidence-note-copy">
+        <span>Combination builder</span>
+        <h2>Candidate ranking is ready</h2>
+        <p>A multi-phage combination will appear after the catalog safety evidence has been reviewed.</p>
+      </div>
+      <div className="evidence-note-status"><i /> Evidence review pending</div>
+    </section>
+  );
+}
+
 function PhageRow({ phage, rank }: { phage: RankedPhage; rank: number }) {
   const [open, setOpen] = useState(false);
   return (
@@ -173,12 +187,7 @@ function ResearchResults({ result }: { result: ResearchRank }) {
         </div>
         <ExportResult data={result} name={result.host_id} />
       </div>
-      <section className="panel blocked-panel">
-        <AlertTriangle size={24} />
-        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Catalog evidence incomplete</h2>
-          <p>Combination output is unavailable until the catalog metadata is reviewed.</p>
-        </div>
-      </section>
+      <EvidenceReviewNotice />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">REAL PRECOMPUTED EMBEDDINGS</span><h2>Ranked dataset phages</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
@@ -197,7 +206,7 @@ function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
       <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div><ExportResult data={result} name={result.locus} /></div>
-      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Catalog evidence incomplete</h2><p>Combination output is unavailable until the catalog metadata is reviewed.</p></div></section>
+      <EvidenceReviewNotice />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
