@@ -113,7 +113,7 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
             <div><span>Diversity</span><strong>{Math.round(result.cocktail.diversity * 100)}%</strong></div>
             <div><span>Redundancy</span><strong>{Math.round(result.cocktail.redundancy * 100)}%</strong></div>
           </div>
-          <p className="method-note"><Info size={15} /> Objective = compatibility + diversity − redundancy. This is a ranking heuristic, not a treatment recommendation.</p>
+          <p className="method-note"><Info size={15} /> Compatibility + diversity − redundancy.</p>
         </article>
 
         <aside className="panel isolate-card">
@@ -146,7 +146,7 @@ function Results({ result, onReset }: { result: Analysis; onReset: () => void })
 
       <section className="limitations">
         <AlertTriangle size={20} />
-        <div><h3>Read before interpreting</h3>{result.limitations.map((item) => <p key={item}>{item}</p>)}</div>
+        <div><h3>Limits</h3><p>Demo ranking only. Laboratory validation is required.</p></div>
       </section>
     </main>
   );
@@ -166,8 +166,8 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
       <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
       <section className="panel blocked-panel">
         <AlertTriangle size={24} />
-        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Ranking stops at laboratory prioritization</h2>
-          {result.cocktail_blockers.map((item) => <p key={item}>{item}</p>)}
+        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2>
+          <p>Real cocktails stay blocked until genomic metadata and laboratory results are reviewed.</p>
         </div>
       </section>
       <section className="panel ranking-panel">
@@ -176,7 +176,7 @@ function ResearchResults({ result, onReset }: { result: ResearchRank; onReset: (
         {result.candidates.map((candidate, index) => (
           <div className="research-row" key={candidate.phage_id}>
             <span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
-            <em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")} · {candidate.safety_status.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
+            <em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
           </div>
         ))}
       </section>
@@ -189,13 +189,13 @@ function NovelResults({ result, onReset }: { result: NovelIsolateRank; onReset: 
     <main className="results page-shell">
       <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.model_version} · {result.species_ani_percent.toFixed(2)}% species ANI</p></div><button className="ghost-button" onClick={onReset}>New analysis</button></div>
       <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
-      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Real ranking stops at laboratory prioritization</h2>{result.cocktail_blockers.map((item) => <p key={item}>{item}</p>)}</div></section>
+      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2><p>Real cocktails require reviewed genomic metadata and laboratory confirmation.</p></div></section>
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")} · {candidate.safety_status.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
+        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
       </section>
-      <section className="limitations"><Info size={20} /><div><h3>Feature provenance</h3><p>{result.feature_source}</p><p>{result.distribution_status.replaceAll("-", " ")} · nearest reference cosine {result.nearest_reference_cosine.toFixed(3)}</p></div></section>
+      <section className="limitations"><Info size={20} /><div><h3>Input check</h3><p>{result.distribution_status.replaceAll("-", " ")} · similarity {result.nearest_reference_cosine.toFixed(3)}</p></div></section>
     </main>
   );
 }
@@ -262,18 +262,18 @@ export default function App() {
         <section className="hero-copy">
           <span className="eyebrow"><span className="live-dot" /> OFFLINE RESEARCH PROTOTYPE</span>
           <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
-          <p className="lead">An explainable screening workspace for ranking phage–host compatibility and assembling diverse cocktail candidates.</p>
+          <p className="lead">Rank phages. Build complementary cocktails. Validate in the lab.</p>
           <div className="flow-strip">
             <div><Microscope /><span>Isolate</span></div><ArrowRight />
             <div><Network /><span>Embedding</span></div><ArrowRight />
             <div><Layers3 /><span>Ranking</span></div><ArrowRight />
             <div><FlaskConical /><span>Validate</span></div>
           </div>
-          <div className="guardrail"><ShieldCheck size={18} /><div><strong>Research use only</strong><span>All outputs require independent laboratory validation.</span></div></div>
+          <div className="guardrail"><ShieldCheck size={18} /><div><strong>Lab validation required</strong></div></div>
         </section>
 
         <section className="input-panel panel">
-          <div className="panel-top"><span>01</span><div><h2>Choose an isolate</h2><p>Start with a demo case or supply a FASTA sequence.</p></div></div>
+          <div className="panel-top"><span>01</span><div><h2>Choose an isolate</h2></div></div>
           <div className="tabs">
             <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Demo cases</button>
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Upload FASTA</button>
@@ -289,7 +289,7 @@ export default function App() {
                   {isolate.id === "kp-mdr-001" && <em>Featured</em>}
                 </button>
               ))}
-              {active && <div className="case-detail"><p>{active.description}</p><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div></div>}
+              {active && <div className="case-detail"><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div></div>}
             </div>
           ) : mode === "upload" ? (
             <div className="upload-area">
@@ -308,7 +308,6 @@ export default function App() {
                 </label>
               </div>
               <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }} spellCheck={false} />
-              <small>Demo mode creates a deterministic placeholder embedding; it does not run gene or resistance calling.</small>
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
                   <strong>Real pipeline: {capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked locally"}</strong>
@@ -319,25 +318,25 @@ export default function App() {
                 setError("");
                 try { setInspection(await inspectAssembly(fasta)); }
                 catch (err) { setError(err instanceof Error ? err.message : "Inspection failed"); }
-              }}>Inspect real-pipeline readiness</button>
-              {inspection && <div className="inspection-result"><strong>Assembly QC: {inspection.qc_status}</strong><span>{inspection.contig_count} contig(s) · {inspection.total_length_bp.toLocaleString()} bp · N50 {inspection.n50_bp.toLocaleString()}</span><small>{inspection.sequence_persisted ? "Sequence stored" : "Sequence was not persisted"} · Pipeline {inspection.pipeline_status}</small></div>}
+              }}>Check assembly</button>
+              {inspection && <div className="inspection-result"><strong>Assembly: {inspection.qc_status}</strong><span>{inspection.contig_count} contig(s) · {inspection.total_length_bp.toLocaleString()} bp · N50 {inspection.n50_bp.toLocaleString()}</span></div>}
               {inspection?.qc_status === "pass" && capabilities?.tools.kaptive && capabilities?.tools.minimap2 && (
                 <button className="inspect-button" onClick={async () => {
                   setError(""); setLocusExtraction(null);
                   try { setLocusExtraction(await extractIsolateLocus(fasta)); }
                   catch (err) { setError(err instanceof Error ? err.message : "K-locus extraction failed"); }
-                }}>Extract isolate K-locus proteins</button>
+                }}>Extract K-locus</button>
               )}
-              {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} validated proteins · {locusExtraction.percent_identity.toFixed(1)}% identity · {locusExtraction.percent_coverage.toFixed(1)}% coverage</span><small>Species confirmed at {locusExtraction.species_ani_percent.toFixed(2)}% ANI ({Math.round(locusExtraction.species_alignment_fraction * 100)}% aligned) · Scoring remains {locusExtraction.pipeline_status.replaceAll("-", " ")}</small></div>}
+              {locusExtraction && <div className="inspection-result"><strong>{locusExtraction.locus} · {locusExtraction.confidence}</strong><span>{locusExtraction.protein_count} proteins · {locusExtraction.species_ani_percent.toFixed(2)}% ANI</span></div>}
               {locusExtraction && capabilities?.novel_isolate_pipeline_ready && (
                 <button className="inspect-button" disabled={featureLoading} onClick={async () => {
                   setError(""); setIsolateEmbedding(null); setFeatureLoading(true);
                   try { setIsolateEmbedding(await embedIsolateLocus(fasta)); }
                   catch (err) { setError(err instanceof Error ? err.message : "ESM-2 embedding failed"); }
                   finally { setFeatureLoading(false); }
-                }}>{featureLoading ? "Generating local ESM-2 feature…" : "Generate verified ESM-2 feature"}</button>
+                }}>{featureLoading ? "Generating ESM-2…" : "Generate ESM-2 feature"}</button>
               )}
-              {isolateEmbedding && <div className="inspection-result"><strong>ESM-2 feature ready</strong><span>{isolateEmbedding.dimensions.toLocaleString()} dimensions · {isolateEmbedding.model}</span><small>Vector cached without raw sequence · Research ranking only</small></div>}
+              {isolateEmbedding && <div className="inspection-result"><strong>ESM-2 ready</strong><span>{isolateEmbedding.dimensions.toLocaleString()} dimensions</span></div>}
             </div>
           ) : (
             <div className="research-picker">
@@ -345,11 +344,10 @@ export default function App() {
               <select id="research-host" value={researchHost} onChange={(event) => setResearchHost(event.target.value)}>
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>
-              <p><Info size={14} />This path uses the trained model and real released ESM-2 embeddings. Cocktail construction stays blocked.</p>
               {modelStatus && <div className="inspection-result">
                 <strong>{modelStatus.model.replace("xgboost.", "")} · {modelStatus.candidate_phages} phages</strong>
                 <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}% · Average precision {modelStatus.test_metrics.average_precision.toFixed(3)}</span>
-                <small>{modelStatus.benchmark_hosts} held-out hosts · Internal benchmark only · Release {modelStatus.release_approved ? "approved" : "blocked"}</small>
+                <small>{modelStatus.benchmark_hosts} held-out hosts · internal benchmark</small>
               </div>}
             </div>
           )}
@@ -359,10 +357,10 @@ export default function App() {
           <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "research" && !researchHost)}>
             {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>{mode === "research" ? "Run held-out benchmark" : mode === "upload" && capabilities?.novel_isolate_pipeline_ready ? "Run real catalog ranking" : "Run candidate discovery"} <ArrowRight size={18} /></>}
           </button>
-          <p className="privacy"><ShieldCheck size={13} /> Runs locally. No external APIs or sequence uploads.</p>
+          <p className="privacy"><ShieldCheck size={13} /> Runs locally.</p>
         </section>
       </main>
-      <footer><span>PHAGE-X / 24H MVP</span><span>AI-guided · Explainable · Lab-gated</span></footer>
+      <footer><span>PHAGE-X / 24H MVP</span></footer>
     </div>
   );
 }
