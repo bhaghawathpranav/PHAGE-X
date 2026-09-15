@@ -8,6 +8,9 @@ from .safety import GenomicSafetyEvidence, evaluate_genomic_safety
 from .schemas import ResearchCandidate
 
 
+MAX_EXHAUSTIVE_REVIEWED_CANDIDATES = 60
+
+
 @dataclass(frozen=True)
 class ReviewedPhageMetadata:
     phage_id: str
@@ -56,6 +59,11 @@ def optimize_reviewed_cocktail(
             blockers.append(f"Genomic safety gate blocked {len(unsafe)} ranked phages")
         blockers.append(f"Only {len(eligible)} independently reviewed candidates are eligible; {size} required")
         return RealCocktailResult("blocked", [], None, None, None, None, None, blockers)
+    if len(eligible) > MAX_EXHAUSTIVE_REVIEWED_CANDIDATES:
+        raise ValueError(
+            f"Exhaustive cocktail search supports at most {MAX_EXHAUSTIVE_REVIEWED_CANDIDATES} "
+            "eligible phages; prefilter the ranked catalog before combination scoring"
+        )
 
     scored = []
     for group in combinations(eligible, size):

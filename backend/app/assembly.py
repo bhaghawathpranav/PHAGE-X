@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 
-MAX_ASSEMBLY_BYTES = 15_000_000
+from .limits import ASSEMBLY_FASTA_MAX_BYTES
+
+
+MAX_ASSEMBLY_BYTES = ASSEMBLY_FASTA_MAX_BYTES
 
 
 @dataclass(frozen=True)
@@ -83,4 +86,3 @@ def parse_assembly_fasta(fasta: str) -> Tuple[List[Tuple[str, str]], AssemblyQC]
         warnings=warnings,
     )
     return records, qc
-

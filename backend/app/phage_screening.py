@@ -6,6 +6,8 @@ from dataclasses import asdict
 from typing import Any
 from zipfile import ZipFile
 
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
 from .phage_catalog import DATA_DIR, validate_phage_catalog
 from .real_cocktail import ReviewedPhageMetadata
 from .safety import GenomicSafetyEvidence, evaluate_genomic_safety
@@ -15,6 +17,49 @@ REQUIRED_SCREENS = (
     "lysogeny_screen_passed", "toxin_screen_passed", "virulence_screen_passed",
     "amr_screen_passed", "contamination_screen_passed", "assembly_qc_passed",
 )
+CURRENT_EVIDENCE_SCHEMA_VERSION = 1
+EVIDENCE_POLICY = "Only independently reviewed evidence may make a phage cocktail-eligible."
+
+
+class ReviewedEvidenceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    phage_id: str = Field(min_length=1, max_length=100)
+    family: str = Field(min_length=1, max_length=100)
+    receptor: str = Field(min_length=1, max_length=100)
+    submitter: str = Field(min_length=1, max_length=200)
+    reviewer: str = Field(min_length=1, max_length=200)
+    source_digest: str = Field(pattern=r"^[a-fA-F0-9]{64}$")
+    lysogeny_screen_passed: bool
+    toxin_screen_passed: bool
+    virulence_screen_passed: bool
+    amr_screen_passed: bool
+    contamination_screen_passed: bool
+    assembly_qc_passed: bool
+
+
+class ReviewedEvidenceRegistry(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_version: int
+    policy: str = Field(min_length=1)
+    records: list[ReviewedEvidenceRecord]
+
+
+def migrate_evidence_registry(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the current in-memory schema; callers decide whether to persist it."""
+    version = payload.get("schema_version", 0)
+    if version == 0:
+        migrated = dict(payload)
+        migrated["schema_version"] = 1
+        migrated.setdefault("policy", EVIDENCE_POLICY)
+        migrated.setdefault("records", [])
+        return migrated
+    if version == CURRENT_EVIDENCE_SCHEMA_VERSION:
+        return payload
+    if isinstance(version, int) and version > CURRENT_EVIDENCE_SCHEMA_VERSION:
+        raise RuntimeError(f"Reviewed evidence schema {version} is newer than this application supports")
+    raise RuntimeError(f"Reviewed evidence schema {version!r} has no migration path")
 
 
 def _sequence_for(phage_id: str) -> str:
@@ -50,23 +95,29 @@ def genome_qc(phage_id: str) -> dict[str, Any]:
 
 
 def load_reviewed_metadata() -> list[ReviewedPhageMetadata]:
-    payload = json.loads(EVIDENCE_PATH.read_text())
-    if payload.get("schema_version") != 1 or not isinstance(payload.get("records"), list):
+    raw_payload = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
+    if not isinstance(raw_payload, dict):
+        raise RuntimeError("Reviewed evidence registry must be a JSON object")
+    try:
+        payload = ReviewedEvidenceRegistry.model_validate(migrate_evidence_registry(raw_payload))
+    except ValidationError as error:
+        raise RuntimeError(f"Reviewed evidence registry failed schema validation: {error.errors()[0]['msg']}") from error
+    if payload.schema_version != CURRENT_EVIDENCE_SCHEMA_VERSION:
         raise RuntimeError("Reviewed evidence registry has an unsupported schema")
     seen: set[str] = set()
     records = []
-    for item in payload["records"]:
-        phage_id = str(item["phage_id"])
+    for item in payload.records:
+        phage_id = item.phage_id
         if phage_id in seen:
             raise RuntimeError(f"Duplicate reviewed evidence for {phage_id}")
         seen.add(phage_id)
-        if item.get("submitter") == item.get("reviewer"):
+        if item.submitter == item.reviewer:
             raise RuntimeError(f"Evidence for {phage_id} lacks independent review")
         evidence = GenomicSafetyEvidence(
-            **{key: item.get(key) for key in REQUIRED_SCREENS},
-            source_digest=item.get("source_digest"), reviewer=item.get("reviewer"),
+            **{key: getattr(item, key) for key in REQUIRED_SCREENS},
+            source_digest=item.source_digest, reviewer=item.reviewer,
         )
-        records.append(ReviewedPhageMetadata(phage_id=phage_id, family=str(item.get("family", "")), receptor=str(item.get("receptor", "")), safety=evidence))
+        records.append(ReviewedPhageMetadata(phage_id=phage_id, family=item.family, receptor=item.receptor, safety=evidence))
     return records
 
 
