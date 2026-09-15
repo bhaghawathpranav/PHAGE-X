@@ -16,7 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
+import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
 type DnaPoint = { x: number; y: number; z: number };
@@ -241,17 +241,10 @@ function ScoreRing({ value, size = 74 }: { value: number; size?: number }) {
   );
 }
 
-function ExportResult({ data, name }: { data: unknown; name: string }) {
-  function download() {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-phage-ranking.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-  return <button className="result-export" onClick={download}><Download size={14} /> Export results</button>;
+function ExportResult({ data, name, href: downloadHref }: { data: unknown; name: string; href?: string }) {
+  const filename = `${name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-phage-ranking.json`;
+  const href = downloadHref || `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
+  return <a className="result-export" href={href} download={filename}><Download size={14} /> Export results</a>;
 }
 
 function EvidenceReviewNotice() {
@@ -377,7 +370,7 @@ function ResearchResults({ result }: { result: ResearchRank }) {
           <h1>Real-model ranking for <em>{result.host_id}</em></h1>
           <p>Ranked against the available phage catalog</p>
         </div>
-        <ExportResult data={result} name={result.host_id} />
+        <ExportResult data={result} name={result.host_id} href={researchRankExportUrl(result.host_id)} />
       </div>
       <EvidenceReviewNotice />
       <section className="panel ranking-panel">
