@@ -20,6 +20,8 @@ PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate o
 - Offline fastANI species confirmation against a checksum-pinned NCBI RefSeq genome
 - Verified local ESM-2 650M inference with a sequence-free persistent vector cache
 - Novel-isolate ranking against all 105 released PhageHostLearn RBP profiles
+- One-click checksum-verified ATCC BAA-2146 FASTA example for the complete uploaded-genome pipeline
+- In-app model-evidence summary focused on top-5 recall, AUROC, PR-AUC, class imbalance, and appropriate interpretation
 - Bounded background feature jobs and a fail-closed reviewed-evidence cocktail optimizer
 - Offline source genomes and 274 author-identified RBP sequences for all 105 catalog phages
 - Per-phage sequence QC plus a fail-closed reviewed-evidence registry; sequence quality is never treated as biological safety clearance
@@ -51,6 +53,7 @@ cd frontend && npm run build
 3. Show how the cocktail rewards diverse families/receptors and penalizes overlapping host-range tags.
 4. Expand a ranked candidate and point out the limitations and lab-validation gate.
 5. Return to the input and switch to FASTA to show the future-facing interface.
+6. Choose **Load verified example** to run the public ATCC BAA-2146 assembly through QC, species confirmation, KL74 extraction, ESM-2 features, and catalog ranking.
 
 The dataset is deliberately synthetic-compatible: it supports a reproducible product demo but must not be represented as experimentally validated observations. See [architecture notes](docs/ARCHITECTURE.md) for model details and the upgrade path.
 
