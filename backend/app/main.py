@@ -1,8 +1,9 @@
 import hashlib
+import re
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
@@ -175,6 +176,20 @@ def research_rank(request: ResearchRankRequest):
         return get_research_model().rank(request.host_id, request.limit)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="Held-out research isolate not found") from error
+
+
+@app.get("/api/research-rank/{host_id}/export")
+def export_research_rank(host_id: str):
+    try:
+        result = get_research_model().rank(host_id, 20)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Held-out research isolate not found") from error
+    safe_name = re.sub(r"[^a-zA-Z0-9-]+", "-", host_id).strip("-").lower() or "phage-x"
+    return Response(
+        content=result.model_dump_json(indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}-phage-ranking.json"'},
+    )
 
 
 @app.get("/api/processing-capabilities")

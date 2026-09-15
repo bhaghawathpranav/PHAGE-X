@@ -17,6 +17,17 @@ def test_health():
     assert response.headers["x-request-id"]
 
 
+def test_research_ranking_can_be_downloaded_as_json():
+    host_id = client.get("/api/research-isolates").json()[0]
+    response = client.get(f"/api/research-rank/{host_id}/export")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.headers["content-disposition"].endswith("-phage-ranking.json\"")
+    result = response.json()
+    assert result["host_id"] == host_id
+    assert len(result["candidates"]) == 20
+
+
 def test_readiness_checks_catalog():
     result = client.get("/api/ready").json()
     assert result == {"status": "ready", "isolates": 2, "phages": 6}
