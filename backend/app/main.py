@@ -333,6 +333,7 @@ def rank_novel_isolate(request: NovelIsolateRankRequest):
         nearest_reference_cosine=distribution["nearest_reference_cosine"],
         candidates=candidates,
         cocktail_status=cocktail.status,
+        cocktail_members=cocktail.members,
         cocktail_blockers=cocktail.blockers + ["Novel-isolate predictions require laboratory confirmation"],
         disclaimer="For laboratory validation only — novel-isolate research ranking, not treatment selection.",
     )

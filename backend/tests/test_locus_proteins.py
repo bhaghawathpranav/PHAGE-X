@@ -1,21 +1,26 @@
-import numpy as np
-import pytest
 import subprocess
 
+import numpy as np
+import pytest
+
 from app.feature_providers import (
-    KaptiveRunner,
+    EmbeddingCache,
     IsolateLocusFeaturePipeline,
     IsolateLocusProteinSet,
-    isolate_proteins_from_kaptive_record,
+    KaptiveRunner,
     LocusProteinSet,
     ReferenceLocusFeaturePipeline,
     find_executable,
+    isolate_proteins_from_kaptive_record,
     parse_protein_fasta,
 )
 
 
 def test_protein_fasta_parser_removes_terminal_stops():
-    names, sequences = parse_protein_fasta(">KL1_01_gene\nMKTAY*\n>KL1_02_gene\nACDE\n")
+    names, sequences = parse_protein_fasta(
+        ">KL1_01_gene\nMKTAY*\n>KL1_02_gene\nACDE\n"
+    )
+
     assert names == ["KL1_01_gene", "KL1_02_gene"]
     assert sequences == ["MKTAY", "ACDE"]
 
@@ -25,9 +30,13 @@ def test_protein_fasta_parser_rejects_invalid_residue():
         parse_protein_fasta(">bad\nMKT?\n")
 
 
-@pytest.mark.skipif(not find_executable("kaptive"), reason="Kaptive not installed")
+@pytest.mark.skipif(
+    not find_executable("kaptive"),
+    reason="Kaptive not installed",
+)
 def test_extracts_pinned_kl107_reference_proteins():
     result = KaptiveRunner().extract_reference_proteins("KL107")
+
     assert result.locus == "KL107"
     assert len(result.sequences) >= 10
     assert all(name.startswith("KL107_") for name in result.names)
@@ -61,7 +70,11 @@ def test_reference_locus_proteins_are_handed_to_embedding_provider():
             assert sequences == proteins.sequences
             return np.arange(1280, dtype=np.float32)
 
-    result = ReferenceLocusFeaturePipeline(Extractor(), Embedder()).build("KL107")
+    result = ReferenceLocusFeaturePipeline(
+        Extractor(),
+        Embedder(),
+    ).build("KL107")
+
     assert result.locus == "KL107"
     assert result.protein_count == 2
     assert result.embedding.shape == (1280,)
@@ -71,14 +84,24 @@ def test_reference_locus_proteins_are_handed_to_embedding_provider():
 def test_reference_locus_pipeline_rejects_wrong_embedding_shape():
     class Extractor:
         def extract_reference_proteins(self, locus):
-            return LocusProteinSet(locus, ["one"], ["ACDE"], "a" * 64, "b" * 64, "3.2.0")
+            return LocusProteinSet(
+                locus,
+                ["one"],
+                ["ACDE"],
+                "a" * 64,
+                "b" * 64,
+                "3.2.0",
+            )
 
     class Embedder:
         def embed(self, sequences):
             return np.zeros(12, dtype=np.float32)
 
     with pytest.raises(ValueError, match="expected"):
-        ReferenceLocusFeaturePipeline(Extractor(), Embedder()).build("KL107")
+        ReferenceLocusFeaturePipeline(
+            Extractor(),
+            Embedder(),
+        ).build("KL107")
 
 
 def test_incomplete_isolate_gene_evidence_fails_closed():
@@ -87,25 +110,45 @@ def test_incomplete_isolate_gene_evidence_fails_closed():
         "confidence": "Typeable",
         "problems": "",
         "missing_genes": ["KL107_09_gtr322"],
-        "expected_genes_inside_locus": [{"gene": "KL107_01_galF", "protein_seq": "ACDE"}],
+        "expected_genes_inside_locus": [
+            {
+                "gene": "KL107_01_galF",
+                "protein_seq": "ACDE",
+            }
+        ],
     }
+
     with pytest.raises(ValueError, match="Missing K-locus genes"):
         isolate_proteins_from_kaptive_record(record)
 
 
 @pytest.mark.skipif(
-    not find_executable("kaptive") or not find_executable("minimap2"),
+    not find_executable("kaptive")
+    or not find_executable("minimap2"),
     reason="Kaptive assembly toolchain not installed",
 )
 def test_extracts_isolate_derived_proteins_from_reference_assembly():
     executable = find_executable("kaptive")
+
     reference = subprocess.run(
-        [executable, "extract", "kpsc_k", "--filter", "^KL107$", "--fna", "-"],
+        [
+            executable,
+            "extract",
+            "kpsc_k",
+            "--filter",
+            "^KL107$",
+            "--fna",
+            "-",
+        ],
         check=True,
         capture_output=True,
         text=True,
     ).stdout
-    result = KaptiveRunner(timeout_seconds=60).type_and_extract_assembly(reference)
+
+    result = KaptiveRunner(timeout_seconds=60).type_and_extract_assembly(
+        reference
+    )
+
     assert result.locus == "KL107"
     assert result.confidence == "Typeable"
     assert result.percent_identity == 100
@@ -117,7 +160,16 @@ def test_extracts_isolate_derived_proteins_from_reference_assembly():
 
 def test_isolate_derived_proteins_are_handed_to_embedding_provider():
     proteins = IsolateLocusProteinSet(
-        "KL107", "Typeable", 100, 100, ["one"], ["ACDE"], "a" * 64, [], "", "3.2.0"
+        "KL107",
+        "Typeable",
+        100,
+        100,
+        ["one"],
+        ["ACDE"],
+        "a" * 64,
+        [],
+        "",
+        "3.2.0",
     )
 
     class Extractor:
@@ -130,7 +182,75 @@ def test_isolate_derived_proteins_are_handed_to_embedding_provider():
             assert sequences == ["ACDE"]
             return np.ones(1280, dtype=np.float32)
 
-    result = IsolateLocusFeaturePipeline(Extractor(), Embedder()).build(">isolate\nACGT")
+    result = IsolateLocusFeaturePipeline(
+        Extractor(),
+        Embedder(),
+    ).build(">isolate\nACGT")
+
     assert result.locus == "KL107"
     assert result.embedding.shape == (1280,)
     assert result.protein_set_sha256 == "a" * 64
+    assert len(result.embedding_cache_key) == 64
+
+
+def test_same_locus_with_different_proteins_gets_different_cache_identity():
+    first_proteins = IsolateLocusProteinSet(
+        "KL107",
+        "Typeable",
+        100,
+        100,
+        ["one"],
+        ["ACDE"],
+        "a" * 64,
+        [],
+        "",
+        "3.2.0",
+    )
+
+    second_proteins = IsolateLocusProteinSet(
+        "KL107",
+        "Typeable",
+        100,
+        100,
+        ["one"],
+        ["ACDF"],
+        "b" * 64,
+        [],
+        "",
+        "3.2.0",
+    )
+
+    class FirstExtractor:
+        def type_and_extract_assembly(self, fasta):
+            return first_proteins
+
+    class SecondExtractor:
+        def type_and_extract_assembly(self, fasta):
+            return second_proteins
+
+    class Embedder:
+        def embed(self, sequences):
+            return np.ones(1280, dtype=np.float32)
+
+    first_result = IsolateLocusFeaturePipeline(
+        FirstExtractor(),
+        Embedder(),
+    ).build(">isolate\nACGT")
+
+    second_result = IsolateLocusFeaturePipeline(
+        SecondExtractor(),
+        Embedder(),
+    ).build(">isolate\nACGT")
+
+    assert first_result.locus == second_result.locus == "KL107"
+    assert first_result.protein_set_sha256 != second_result.protein_set_sha256
+    assert first_result.embedding_cache_key != second_result.embedding_cache_key
+
+
+def test_embedding_cache_key_matches_actual_protein_content():
+    cache = EmbeddingCache
+
+    key_one = cache.key(["ACDE"])
+    key_two = cache.key(["ACDF"])
+
+    assert key_one != key_two

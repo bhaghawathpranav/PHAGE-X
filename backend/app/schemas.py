@@ -224,6 +224,7 @@ class NovelIsolateRankResponse(BaseModel):
     nearest_reference_cosine: float
     candidates: List[ResearchCandidate]
     cocktail_status: str
+    cocktail_members: List[str]
     cocktail_blockers: List[str]
     disclaimer: str
 
