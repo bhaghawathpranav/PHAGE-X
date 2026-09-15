@@ -41,3 +41,13 @@ def test_out_of_distribution_vector_is_rejected():
     model = get_research_model()
     with np.testing.assert_raises_regex(ValueError, "outside"):
         model.rank_vector(np.zeros(1280, dtype=np.float32), 5)
+
+
+def test_xgboost_scores_vary_by_candidate_and_host():
+    model = get_research_model()
+    first = model.rank(str(model.host_ids[0]), 10)
+    second = model.rank(str(model.host_ids[1]), 10)
+    first_scores = [item.compatibility for item in first.candidates]
+    second_scores = [item.compatibility for item in second.candidates]
+    assert len(set(first_scores)) > 1
+    assert first_scores != second_scores

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -16,11 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
+import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
-
-const demoFasta = `>KPN-demo-upload
-ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
 
 function DnaBackdrop() {
   return (
@@ -211,8 +208,6 @@ function NovelResults({ result }: { result: NovelIsolateRank }) {
 }
 
 export default function App() {
-  const [isolates, setIsolates] = useState<Isolate[]>([]);
-  const [selected, setSelected] = useState("kp-mdr-001");
   const [mode, setMode] = useState<"demo" | "upload" | "research">("demo");
   const [researchIsolates, setResearchIsolates] = useState<string[]>([]);
   const [researchHost, setResearchHost] = useState("");
@@ -222,8 +217,6 @@ export default function App() {
   const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
   const [isolateEmbedding, setIsolateEmbedding] = useState<IsolateEmbedding | null>(null);
   const [fasta, setFasta] = useState("");
-  const [isExampleFasta, setIsExampleFasta] = useState(false);
-  const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
   const [novelResult, setNovelResult] = useState<NovelIsolateRank | null>(null);
@@ -254,7 +247,6 @@ export default function App() {
     if (file.size > 5_000_000) { setError("The selected file is larger than the 5 MB limit."); return; }
     const contents = await file.text();
     setFasta(contents);
-    setIsExampleFasta(false);
     resetUploadChecks();
   }
 
@@ -287,13 +279,10 @@ export default function App() {
   }, [result, researchResult, novelResult, mode]);
 
   useEffect(() => {
-    getIsolates().then(setIsolates).catch((err) => setError(err.message));
     getResearchIsolates().then((items) => { setResearchIsolates(items); setResearchHost(items[0] || ""); }).catch((err) => setError(err.message));
     getProcessingCapabilities().then(setCapabilities).catch(() => undefined);
     getResearchModelStatus().then(setModelStatus).catch(() => undefined);
   }, []);
-
-  const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
 
   async function run() {
     if (mode === "upload") {
@@ -303,19 +292,13 @@ export default function App() {
     setLoading(true);
     setError("");
     try {
-      if (mode === "research") {
+      if (mode === "research" || mode === "demo") {
         setResearchResult(await rankResearchHost(researchHost));
       } else if (mode === "upload") {
-        if (isExampleFasta) {
-          setResult(await analyze({ fasta, isolate_name: "Sample KPN isolate", demo_fasta: true, cocktail_size: size }));
-        } else {
-          if (!capabilities?.novel_isolate_pipeline_ready) {
-            throw new Error("The real uploaded-genome ML pipeline is unavailable. Install the listed local tools; no demo fallback was used.");
-          }
-          setNovelResult(await rankNovelIsolateInBackground(fasta));
+        if (!capabilities?.novel_isolate_pipeline_ready) {
+          throw new Error("The real uploaded-genome ML pipeline is unavailable. Install the listed local tools; no demo fallback was used.");
         }
-      } else {
-        setResult(await analyze({ isolate_id: selected, cocktail_size: size }));
+        setNovelResult(await rankNovelIsolateInBackground(fasta));
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -374,27 +357,27 @@ export default function App() {
         <section className="input-panel panel">
           <div className="panel-top"><span>01</span><div><h2>Choose your input</h2></div></div>
           <div className="tabs">
-            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Try a sample</button>
+            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>XGBoost sample</button>
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Use my FASTA</button>
             <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Model benchmark</button>
           </div>
-          <p className="mode-help">{mode === "demo" ? "A sample case is a prepared bacterial isolate profile, not a patient record. Select one to run the complete workflow without uploading a genome." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance—not to analyze your own sequence."}</p>
+          <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance, not to analyze your own sequence."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
-              {isolates.map((isolate) => (
-                <button key={isolate.id} className={`case-option ${selected === isolate.id ? "selected" : ""}`} onClick={() => setSelected(isolate.id)}>
+              {researchIsolates.slice(0, 3).map((isolate) => (
+                <button key={isolate} className={`case-option ${researchHost === isolate ? "selected" : ""}`} onClick={() => setResearchHost(isolate)}>
                   <span className="radio"><i /></span>
-                  <span><strong>{isolate.name}</strong><small>{isolate.sequence_type} · {isolate.k_locus}</small></span>
+                  <span><strong>{isolate}</strong><small>Held-out <em>K. pneumoniae</em> isolate</small></span>
                 </button>
               ))}
-              {active && <div className="case-detail">
-                <div className="case-detail-head"><span>Selected isolate</span><strong>{active.name}</strong></div>
-                <p>{active.description}</p>
+              {researchHost && <div className="case-detail">
+                <div className="case-detail-head"><span>Selected isolate</span><strong>{researchHost}</strong></div>
+                <p>This isolate was excluded from model training. Its released protein embeddings are used to test how the trained model ranks unseen host-phage pairs.</p>
                 <div className="case-facts">
                   <div><span>Organism</span><strong><em>K.</em> pneumoniae</strong></div>
-                  <div><span>Sequence type</span><strong>{active.sequence_type}</strong></div>
-                  <div><span>Capsule locus</span><strong>{active.k_locus}</strong></div>
+                  <div><span>Model role</span><strong>Held-out test</strong></div>
+                  <div><span>Catalog</span><strong>105 phages</strong></div>
                 </div>
               </div>}
             </div>
@@ -408,28 +391,26 @@ export default function App() {
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
                 <div className="input-actions">
-                  <button type="button" className="file-control" onClick={() => { setFasta(demoFasta); setIsExampleFasta(true); resetUploadChecks(); }}>Use sample FASTA</button>
-                  <a className="file-control" href="/samples/klebsiella-demo.fasta" download><Download size={12} /> Download sample</a>
                   <button type="button" className="file-control choose-file" onClick={() => fileInputRef.current?.click()}><Upload size={12} /> Choose FASTA file</button>
                   <input ref={fileInputRef} className="native-file-input" type="file" accept=".fasta,.fa,.fna,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadFastaFile(file); event.target.value = ""; }} />
                 </div>
               </div>
               <span className="drop-hint">or drop a FASTA file anywhere in this area</span>
               <p className="fasta-format"><strong>Expected format</strong><code>&gt;isolate-name<br />ACGTACGTACGT...</code><span>Whole-genome assemblies may contain multiple FASTA records. Maximum uncompressed file size: 5 MB.</span></p>
-              <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); setIsExampleFasta(false); resetUploadChecks(); }} spellCheck={false} />
+              <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); resetUploadChecks(); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
-                  <strong>{isExampleFasta ? "Sample demonstration" : `Uploaded-genome ML: ${capabilities.novel_isolate_pipeline_ready ? "ready" : "unavailable"}`}</strong>
-                  <span>{isExampleFasta ? "The included example uses the instant demonstration path" : capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
+                  <strong>Uploaded-genome ML: {capabilities.novel_isolate_pipeline_ready ? "ready" : "unavailable"}</strong>
+                  <span>{capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
                 </div>
               )}
-              {!isExampleFasta && <div className="ml-path">
+              <div className="ml-path">
                 <div><span>01</span><strong>Assembly QC</strong><small>Validate the uploaded genome</small></div>
                 <div><span>02</span><strong>Species + capsule</strong><small>fastANI and Kaptive</small></div>
                 <div><span>03</span><strong>Protein features</strong><small>Local ESM-2 embeddings</small></div>
                 <div><span>04</span><strong>Phage ranking</strong><small>Calibrated XGBoost, 105 phages</small></div>
                 <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
-              </div>}
+              </div>
               <button className="inspect-button" onClick={async () => {
                 setError("");
                 const validationError = validateFastaInput(fasta);
@@ -470,10 +451,9 @@ export default function App() {
             </div>
           )}
 
-          {mode !== "research" && <div className="size-picker"><span>02 · Choose shortlist size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
           {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
-          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "upload" && (!fasta.trim() || (!isExampleFasta && !capabilities?.novel_isolate_pipeline_ready))) || (mode === "research" && !researchHost)}>
-            {loading ? <><LoaderCircle className="spin" size={18} />Analyzing…</> : <>{mode === "research" ? "02 · Run benchmark" : mode === "upload" && !isExampleFasta ? capabilities?.novel_isolate_pipeline_ready ? "03 · Run real ML ranking" : "Real ML pipeline unavailable" : "03 · Generate phage shortlist"} <ArrowRight size={18} /></>}
+          <button className="run-button" onClick={run} disabled={loading || ((mode === "demo" || mode === "research") && !researchHost) || (mode === "upload" && (!fasta.trim() || !capabilities?.novel_isolate_pipeline_ready))}>
+            {loading ? <><LoaderCircle className="spin" size={18} />Running XGBoost…</> : <>{mode === "upload" ? capabilities?.novel_isolate_pipeline_ready ? "Run uploaded-genome XGBoost ranking" : "Real ML pipeline unavailable" : "Run XGBoost ranking"} <ArrowRight size={18} /></>}
           </button>
           <p className="privacy"><ShieldCheck size={13} /> Runs locally.</p>
         </section>
