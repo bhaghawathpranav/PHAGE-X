@@ -54,6 +54,8 @@ cd frontend && npm run build
 
 The dataset is deliberately synthetic-compatible: it supports a reproducible product demo but must not be represented as experimentally validated observations. See [architecture notes](docs/ARCHITECTURE.md) for model details and the upgrade path.
 
+For the problem framing, competitive positioning, validation strategy, and ready-to-deliver scripts, see the [pitch report](docs/PITCH_REPORT.md).
+
 The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Each real phage has traceable genome QC through `/api/phage-evidence/{phage_id}`. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
 
 The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. With the complete local toolchain, an uploaded assembly is species-confirmed, K-locus typed, embedded, distribution-checked, and ranked against 105 released phage RBP profiles. Real cocktail construction remains blocked until independent phage safety and diversity metadata are available. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
