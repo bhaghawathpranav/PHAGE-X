@@ -16,7 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
+import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, getVerifiedSampleFasta, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
 type DnaPoint = { x: number; y: number; z: number };
@@ -416,6 +416,7 @@ export default function App() {
   const [novelResult, setNovelResult] = useState<NovelIsolateRank | null>(null);
   const [loading, setLoading] = useState(false);
   const [featureLoading, setFeatureLoading] = useState(false);
+  const [sampleLoading, setSampleLoading] = useState(false);
   const [error, setError] = useState("");
   const [draggingFile, setDraggingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -590,6 +591,18 @@ export default function App() {
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
                 <div className="input-actions">
+                  <button type="button" className="file-control verified-sample" disabled={sampleLoading} onClick={async () => {
+                    setSampleLoading(true);
+                    setError("");
+                    try {
+                      setFasta(await getVerifiedSampleFasta());
+                      resetUploadChecks();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "Could not load the verified sample");
+                    } finally {
+                      setSampleLoading(false);
+                    }
+                  }}>{sampleLoading ? "Loading…" : "Load verified example"}</button>
                   <button type="button" className="file-control choose-file" onClick={() => fileInputRef.current?.click()}><Upload size={12} /> Choose FASTA file</button>
                   <input ref={fileInputRef} className="native-file-input" type="file" accept=".fasta,.fa,.fna,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadFastaFile(file); event.target.value = ""; }} />
                 </div>
@@ -647,6 +660,20 @@ export default function App() {
                 <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · PR-AUC {modelStatus.test_metrics.average_precision.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}%</span>
                 <small>{Math.round(modelStatus.test_metrics.accuracy * 1000) / 10}% raw accuracy · {Math.round(modelStatus.test_metrics.balanced_accuracy * 1000) / 10}% balanced accuracy · {modelStatus.benchmark_hosts} held-out hosts</small>
               </div>}
+              {modelStatus && <section className="model-evidence" aria-label="Model evaluation evidence">
+                <div className="evidence-intro">
+                  <span>WHAT THE EVALUATION SHOWS</span>
+                  <h3>The model is useful for narrowing the search.</h3>
+                  <p>Top-5 recall is the clearest product metric: for almost nine out of ten evaluable held-out hosts with a known interaction, a matching phage appeared within the first five candidates.</p>
+                </div>
+                <div className="evidence-metrics">
+                  <div><strong>{Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}%</strong><span>Top-5 host recall</span><small>Shortlist retrieval</small></div>
+                  <div><strong>{modelStatus.test_metrics.roc_auc.toFixed(3)}</strong><span>ROC-AUC</span><small>Ranking separation</small></div>
+                  <div><strong>{modelStatus.test_metrics.average_precision.toFixed(3)}</strong><span>PR-AUC</span><small>Positive-pair quality</small></div>
+                  <div><strong>{Math.round(modelStatus.test_metrics.recall * 100)}%</strong><span>Positive recall</span><small>Thresholded detection</small></div>
+                </div>
+                <p className="evidence-caveat"><AlertTriangle size={14} /> Raw accuracy is not the headline metric because only 3.3% of evaluated pairs are positive. This evidence supports candidate prioritization, not automatic susceptibility or treatment decisions.</p>
+              </section>}
             </div>
           )}
 

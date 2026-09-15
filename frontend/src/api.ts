@@ -6,6 +6,17 @@ export function researchRankExportUrl(hostId: string): string {
   return `${API}/api/research-rank/${encodeURIComponent(hostId)}/export`;
 }
 
+export async function getVerifiedSampleFasta(sampleId = "atcc-baa-2146"): Promise<string> {
+  try {
+    const response = await fetch(`${API}/api/verified-samples/${encodeURIComponent(sampleId)}/fasta`);
+    if (!response.ok) throw new Error("The verified FASTA example is unavailable.");
+    return response.text();
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error("The PHAGE-X backend is offline. Start the local API, then retry.");
+    throw error;
+  }
+}
+
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

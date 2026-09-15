@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import hashlib
 import importlib
 import numpy as np
 
@@ -30,6 +31,15 @@ def test_research_ranking_can_be_downloaded_as_pdf():
 def test_readiness_checks_catalog():
     result = client.get("/api/ready").json()
     assert result == {"status": "ready", "isolates": 2, "phages": 6}
+
+
+def test_verified_sample_is_available_with_expected_digest():
+    samples = client.get("/api/verified-samples").json()
+    assert samples[0]["id"] == "atcc-baa-2146"
+    response = client.get("/api/verified-samples/atcc-baa-2146/fasta")
+    assert response.status_code == 200
+    assert response.content.startswith(b">")
+    assert hashlib.sha256(response.content).hexdigest() == samples[0]["sha256"]
 
 
 def test_preloaded_case_complete_path():

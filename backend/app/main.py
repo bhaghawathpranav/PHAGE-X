@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
@@ -49,6 +50,7 @@ from .schemas import (
 
 
 settings = get_settings()
+VERIFIED_SAMPLE_FASTA = Path(__file__).parent.parent / "data" / "samples" / "GCF_000364385.3_ASM36438v3_genomic.fna"
 novel_rank_jobs = BoundedJobManager(max_workers=1, max_queued=2, retention_minutes=60)
 logging.basicConfig(level=settings.log_level)
 app = FastAPI(
@@ -113,6 +115,31 @@ def operations():
 def list_isolates():
     data = load_demo_data()
     return [{key: item[key] for key in IsolateSummary.model_fields} for item in data["isolates"]]
+
+
+@app.get("/api/verified-samples")
+def verified_samples():
+    return [{
+        "id": "atcc-baa-2146",
+        "name": "ATCC BAA-2146",
+        "organism": "Klebsiella pneumoniae",
+        "assembly_accession": "GCF_000364385.3",
+        "expected_locus": "KL74",
+        "expected_ani_percent": 99.6154,
+        "sha256": "09daf5ed0792910798be0570c72fd0e56468eaeecb7bcc3eea63a4af4cc948ea",
+    }]
+
+
+@app.get("/api/verified-samples/{sample_id}/fasta")
+def verified_sample_fasta(sample_id: str):
+    if sample_id != "atcc-baa-2146" or not VERIFIED_SAMPLE_FASTA.is_file():
+        raise HTTPException(status_code=404, detail="Verified FASTA sample not found")
+    return FileResponse(
+        VERIFIED_SAMPLE_FASTA,
+        media_type="text/plain; charset=utf-8",
+        filename=VERIFIED_SAMPLE_FASTA.name,
+        content_disposition_type="inline",
+    )
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
