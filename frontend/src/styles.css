@@ -138,3 +138,28 @@ header{background:rgba(7,10,20,.94);border-color:#222b40}.brand-mark{color:var(-
 .phage-summary:hover{background:rgba(var(--accent-rgb),.035)}.phage-details,.qc-card{background:#090e19;border-color:#273149;border-radius:1px}.contribution:after{background:#202a3e}.contribution i{background:var(--mint)}
 .blocked-panel{background:#15131f;border-color:#433c61}.blocked-panel>svg{color:#a98fff}
 footer{border-color:#222b40;color:#78849b}
+
+/* Final light presentation — quiet, product-led, and image-first. */
+:root{--mint:#0071e3;--accent-rgb:0,113,227;--ink:#1d1d1f;--panel:#fff;--muted:#6e6e73;--line:#d2d2d7}
+html,body,#root{background:#fff;color:#1d1d1f}
+body{background:#fff}
+body:before{display:none}
+header{background:rgba(255,255,255,.82);border-color:rgba(0,0,0,.08);color:#1d1d1f}
+.brand-mark strong{color:#1d1d1f}.header-meta{color:#6e6e73}.header-meta i{background:#34c759}.header-back{border-color:#d2d2d7;color:#1d1d1f}
+.hero-layout{padding-top:76px;background:#fff}
+.hero-copy{position:relative;z-index:2}.hero-copy h1,.results-head h1{color:#1d1d1f}.lead{color:#6e6e73}
+.dna-scene{position:absolute;z-index:0;top:86px;right:50%;width:430px;height:610px;opacity:.28;transform:translate3d(50%,calc(var(--scroll-y) * -.025px),0);filter:none;pointer-events:none;overflow:hidden;mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 76%,transparent 100%)}
+.dna-scene img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;mix-blend-mode:screen;filter:saturate(.9) contrast(1.08);animation:dna-product-float 8s ease-in-out infinite}
+@keyframes dna-product-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.015)}}
+.flow-strip{position:relative;z-index:2}.flow-strip div{color:#515154}.flow-strip>svg{color:#b5b5ba}.guardrail strong{color:#515154}
+.panel{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;box-shadow:0 14px 44px rgba(0,0,0,.07);color:#1d1d1f}
+.input-panel{position:relative;z-index:2}.panel-top{border-color:#e5e5e7}.panel-top h2,.case-option strong,.panel-heading h2,.isolate-card h3,.phage-identity strong,.research-row strong{color:#1d1d1f}
+.tabs{background:#f2f2f4;border:0;border-radius:9px}.tabs button{color:#6e6e73;border-radius:7px}.tabs button.active{background:#fff;color:#1d1d1f;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.case-option{background:#fff;border-color:#d9d9de;border-radius:9px;color:#1d1d1f}.case-option.selected{background:#f4f9ff;border-color:var(--mint)}.case-option small,.profile-line span,.metric-row span,.results-head p{color:#6e6e73}
+.tag-list span{background:#f2f2f4;border-color:transparent;color:#515154;border-radius:5px}.size-picker button,.inspect-button{border-color:#d2d2d7;border-radius:7px;color:#515154}.size-picker button.active{background:#edf5ff;border-color:var(--mint);color:var(--mint)}
+.run-button{background:#0071e3;border-radius:9px;color:#fff}.run-button:hover{background:#0077ed;box-shadow:0 7px 20px rgba(0,113,227,.2)}
+.upload-area textarea,.research-picker select{background:#fff;border-color:#d2d2d7;border-radius:9px;color:#1d1d1f}.pipeline-state,.inspection-result,.qc-card,.phage-details{background:#f5f5f7;border-color:#e5e5e7;border-radius:8px}
+.validation-banner{background:#eef7ff;border-color:transparent;border-left-color:#0071e3;border-radius:6px;color:#245177}.score-track{stroke:#e5e5e7}.score-progress{stroke:#0071e3}.metric-row,.profile-line,.phage-row,.research-row{border-color:#e5e5e7}.mini-score,.research-row b{color:#1d1d1f}
+.phage-summary:hover{background:#fafafa}.phage-orb{border-color:#c7dcf2;background:#f1f7fd;color:#0071e3}.phage-orb span{background:#0071e3}.blocked-panel{background:#fff8ed;border-color:#f1d5a8}.blocked-panel h2{color:#1d1d1f}.blocked-panel p{color:#6e6e73}
+footer{background:#f5f5f7;border-color:#d2d2d7;color:#86868b}
+@media(max-width:600px){.dna-scene{top:80px;width:280px;height:430px;opacity:.2}}

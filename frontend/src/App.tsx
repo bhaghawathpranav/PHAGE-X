@@ -23,25 +23,9 @@ const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
 
 function DnaBackdrop() {
-  const rungs = Array.from({ length: 15 }, (_, index) => ({
-    y: 36 + index * 31,
-    left: 100 + Math.sin(index * 0.92) * 54,
-    right: 100 - Math.sin(index * 0.92) * 54,
-  }));
   return (
     <div className="dna-scene" aria-hidden="true">
-      <div className="dna-glow" />
-      <svg className="dna-helix" viewBox="0 0 200 510">
-        <path className="dna-strand strand-a" d="M100 4 C25 45 25 85 100 126 S175 207 100 248 S25 329 100 370 S175 451 100 506" />
-        <path className="dna-strand strand-b" d="M100 4 C175 45 175 85 100 126 S25 207 100 248 S175 329 100 370 S25 451 100 506" />
-        {rungs.map((rung, index) => (
-          <g className="dna-rung" style={{ animationDelay: `${index * -0.12}s` }} key={rung.y}>
-            <line x1={rung.left} y1={rung.y} x2={rung.right} y2={rung.y} />
-            <circle cx={rung.left} cy={rung.y} r="4" />
-            <circle cx={rung.right} cy={rung.y} r="4" />
-          </g>
-        ))}
-      </svg>
+      <img src="/assets/dna-hero.png" alt="" />
     </div>
   );
 }
