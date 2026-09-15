@@ -8,6 +8,7 @@ def test_research_artifact_is_blocked_from_release():
     assert status["benchmark_hosts"] > 0
     assert status["candidate_phages"] == 105
     assert status["model"] == "xgboost.XGBClassifier"
+    assert status["decision_threshold"] == status["test_metrics"]["decision_threshold"]
 
 
 def test_held_out_host_ranking_uses_real_embeddings_and_blocks_cocktail():
@@ -23,6 +24,14 @@ def test_held_out_host_ranking_uses_real_embeddings_and_blocks_cocktail():
         for index in range(9)
     )
     assert all(item.safety_status.startswith("blocked") for item in result.candidates)
+    assert all(
+        item.decision == (
+            "higher-priority-research-signal"
+            if item.compatibility >= model.decision_threshold
+            else "lower-priority-research-signal"
+        )
+        for item in result.candidates
+    )
 
 
 def test_novel_vector_path_uses_same_real_phage_catalog():

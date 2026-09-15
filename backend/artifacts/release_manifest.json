@@ -1,9 +1,10 @@
 {
-  "created_at": "2026-09-15T04:49:13.510629+00:00",
+  "created_at": "2026-09-15T17:08:49.766179+00:00",
   "research_only": true,
   "artifacts": {
-    "model.joblib": "fafa09a41d7eb5d70f309dc76678b5096fea36793241728298e3b3f2070ae2f3",
-    "model_card.json": "a227892f4e10a892ef2990ea51aaba4dfb5c9f1e57f1c8ad545babb592d87003",
-    "runtime_catalog.npz": "a12e1cb4e7f826dfbc59113a5a13abe4a7ac725f1e6d5a1fed227d5c9935a491"
+    "model.joblib": "82ebb4f05f0c94cf8c09dc04a22b26608b37e27097acb9d97e7e68a8b235638f",
+    "model_card.json": "7f4f1a548b28cc7845798885d21afa32539023daaa5879f32300fcb98bb1f8f7",
+    "runtime_catalog.npz": "a12e1cb4e7f826dfbc59113a5a13abe4a7ac725f1e6d5a1fed227d5c9935a491",
+    "kaggle_metrics.json": "0fbfffc72aceae1ba4a21af3e1eadaeadcc160b5478f796f95d3f67d4b1283b6"
   }
 }

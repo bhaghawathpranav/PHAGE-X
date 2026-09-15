@@ -27,6 +27,9 @@ class ResearchModel:
         catalog = np.load(artifact_dir / "runtime_catalog.npz", allow_pickle=False)
         self.model = bundle["model"]
         self.calibrator = bundle["calibrator"]
+        self.decision_threshold = float(bundle.get("decision_threshold", 0.5))
+        if not 0 < self.decision_threshold < 1:
+            raise ValueError("Trained decision threshold must be between 0 and 1")
         self.host_ids = catalog["host_ids"]
         self.host_vectors = catalog["host_vectors"]
         self.phage_ids = catalog["phage_ids"]
@@ -48,6 +51,7 @@ class ResearchModel:
             "candidate_phages": len(self.phage_ids),
             "dataset_doi": self.card["dataset_doi"],
             "model": self.card["model"],
+            "decision_threshold": self.decision_threshold,
         }
 
     def rank(self, host_id: str, limit: int) -> ResearchRankResponse:
@@ -105,10 +109,8 @@ class ResearchModel:
             probability = float(probabilities[index])
             decision = (
                 "higher-priority-research-signal"
-                if probability >= 0.65
+                if probability >= self.decision_threshold
                 else "lower-priority-research-signal"
-                if probability <= 0.35
-                else "abstain-uncertain"
             )
             candidates.append(
                 ResearchCandidate(

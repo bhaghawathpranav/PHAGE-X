@@ -453,9 +453,9 @@ export default function App() {
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>
               {modelStatus && <div className="inspection-result">
-                <strong>{modelStatus.candidate_phages} candidate phages</strong>
-                <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}% · Average precision {modelStatus.test_metrics.average_precision.toFixed(3)}</span>
-                <small>{modelStatus.benchmark_hosts} held-out hosts · internal benchmark</small>
+                <strong>Kaggle-trained XGBoost · {modelStatus.candidate_phages} candidate phages</strong>
+                <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · PR-AUC {modelStatus.test_metrics.average_precision.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}%</span>
+                <small>{Math.round(modelStatus.test_metrics.accuracy * 1000) / 10}% raw accuracy · {Math.round(modelStatus.test_metrics.balanced_accuracy * 1000) / 10}% balanced accuracy · {modelStatus.benchmark_hosts} held-out hosts</small>
               </div>}
             </div>
           )}

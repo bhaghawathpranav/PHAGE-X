@@ -74,6 +74,14 @@ export type ResearchModelStatus = {
   release_approved: boolean;
   release_reason: string;
   test_metrics: {
+    decision_threshold: number;
+    accuracy: number;
+    balanced_accuracy: number;
+    precision: number;
+    recall: number;
+    specificity: number;
+    f1: number;
+    matthews_correlation: number;
     roc_auc: number;
     average_precision: number;
     brier_score: number;
@@ -82,6 +90,7 @@ export type ResearchModelStatus = {
   };
   benchmark_hosts: number;
   candidate_phages: number;
+  decision_threshold: number;
 };
 
 export type ProcessingCapabilities = {
