@@ -22,6 +22,31 @@ import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLo
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
 
+function DnaBackdrop() {
+  const rungs = Array.from({ length: 15 }, (_, index) => ({
+    y: 36 + index * 31,
+    left: 100 + Math.sin(index * 0.92) * 54,
+    right: 100 - Math.sin(index * 0.92) * 54,
+  }));
+  return (
+    <div className="dna-scene" aria-hidden="true">
+      <div className="dna-glow" />
+      <svg className="dna-helix" viewBox="0 0 200 510">
+        <path className="dna-strand strand-a" d="M100 4 C25 45 25 85 100 126 S175 207 100 248 S25 329 100 370 S175 451 100 506" />
+        <path className="dna-strand strand-b" d="M100 4 C175 45 175 85 100 126 S25 207 100 248 S175 329 100 370 S25 451 100 506" />
+        {rungs.map((rung, index) => (
+          <g className="dna-rung" style={{ animationDelay: `${index * -0.12}s` }} key={rung.y}>
+            <line x1={rung.left} y1={rung.y} x2={rung.right} y2={rung.y} />
+            <circle cx={rung.left} cy={rung.y} r="4" />
+            <circle cx={rung.right} cy={rung.y} r="4" />
+          </g>
+        ))}
+      </svg>
+      <span className="dna-particle p1" /><span className="dna-particle p2" /><span className="dna-particle p3" />
+    </div>
+  );
+}
+
 function ScoreRing({ value, size = 74 }: { value: number; size?: number }) {
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
@@ -221,6 +246,29 @@ export default function App() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let frame = 0;
+    const updateScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty("--scroll-y", `${window.scrollY}`);
+        document.documentElement.style.setProperty("--scroll-progress", `${Math.min(window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1)}`);
+      });
+    };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => entry.target.classList.toggle("is-visible", entry.isIntersecting));
+    }, { threshold: 0.12 });
+    const timer = window.setTimeout(() => {
+      document.querySelectorAll(".panel, .results-head, .validation-banner, .limitations, .flow-strip").forEach((element) => {
+        element.classList.add("scroll-reveal");
+        observer.observe(element);
+      });
+      updateScroll();
+    }, 0);
+    window.addEventListener("scroll", updateScroll, { passive: true });
+    return () => { window.clearTimeout(timer); window.removeEventListener("scroll", updateScroll); cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [result, researchResult, novelResult, mode]);
+
+  useEffect(() => {
     getIsolates().then(setIsolates).catch((err) => setError(err.message));
     getResearchIsolates().then((items) => { setResearchIsolates(items); setResearchHost(items[0] || ""); }).catch((err) => setError(err.message));
     getProcessingCapabilities().then(setCapabilities).catch(() => undefined);
@@ -251,12 +299,13 @@ export default function App() {
     }
   }
 
-  if (result) return <><Header /><Results result={result} onReset={() => setResult(null)} /></>;
-  if (researchResult) return <><Header /><ResearchResults result={researchResult} onReset={() => setResearchResult(null)} /></>;
-  if (novelResult) return <><Header /><NovelResults result={novelResult} onReset={() => setNovelResult(null)} /></>;
+  if (result) return <><DnaBackdrop /><Header /><Results result={result} onReset={() => setResult(null)} /></>;
+  if (researchResult) return <><DnaBackdrop /><Header /><ResearchResults result={researchResult} onReset={() => setResearchResult(null)} /></>;
+  if (novelResult) return <><DnaBackdrop /><Header /><NovelResults result={novelResult} onReset={() => setNovelResult(null)} /></>;
 
   return (
     <div className="app">
+      <DnaBackdrop />
       <Header />
       <main className="page-shell hero-layout">
         <section className="hero-copy">
