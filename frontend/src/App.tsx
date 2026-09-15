@@ -374,7 +374,7 @@ export default function App() {
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Use my FASTA</button>
             <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Model benchmark</button>
           </div>
-          <p className="mode-help">{mode === "demo" ? "Select a prepared Klebsiella case to see the complete workflow." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance—not to analyze your own sequence."}</p>
+          <p className="mode-help">{mode === "demo" ? "A sample case is a prepared bacterial isolate profile, not a patient record. Select one to run the complete workflow without uploading a genome." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance—not to analyze your own sequence."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
@@ -384,7 +384,16 @@ export default function App() {
                   <span><strong>{isolate.name}</strong><small>{isolate.sequence_type} · {isolate.k_locus}</small></span>
                 </button>
               ))}
-              {active && <div className="case-detail"><p><strong>Resistance context:</strong> {active.description} These labels explain the demo case but are not used to calculate phage compatibility.</p><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag} resistant</span>)}</div></div>}
+              {active && <div className="case-detail">
+                <div className="case-detail-head"><span>Selected isolate</span><strong>{active.name}</strong></div>
+                <p>{active.description}</p>
+                <div className="case-facts">
+                  <div><span>Organism</span><strong><em>K.</em> pneumoniae</strong></div>
+                  <div><span>Sequence type</span><strong>{active.sequence_type}</strong></div>
+                  <div><span>Capsule locus</span><strong>{active.k_locus}</strong></div>
+                </div>
+                <div className="resistance-block"><div><span>Resistance profile</span><small>Context only. These labels do not calculate compatibility.</small></div><div className="tag-list">{active.resistance.map((tag) => <span key={tag}>{tag} resistant</span>)}</div></div>
+              </div>}
             </div>
           ) : mode === "upload" ? (
             <div className={`upload-area ${draggingFile ? "dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDraggingFile(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDraggingFile(false); }} onDrop={(event) => { event.preventDefault(); setDraggingFile(false); const file = event.dataTransfer.files[0]; if (file) void loadFastaFile(file); }}>
