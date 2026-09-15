@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Dna,
+  Download,
   FlaskConical,
   Layers3,
   LoaderCircle,
@@ -339,14 +340,21 @@ export default function App() {
             </div>
           ) : mode === "upload" ? (
             <div className="upload-area">
+              <div className="organism-scope">
+                <span>Supported organism</span>
+                <strong><em>K</em>lebsiella pneumoniae species complex</strong>
+                <small>Other organisms require their own validated host–phage dataset, phage catalog, receptor features, and species reference.</small>
+              </div>
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
                 <div className="input-actions">
-                  <button type="button" className="file-control" onClick={() => { setFasta(demoFasta); setIsExampleFasta(true); resetUploadChecks(); }}>Load example</button>
+                  <button type="button" className="file-control" onClick={() => { setFasta(demoFasta); setIsExampleFasta(true); resetUploadChecks(); }}>Use sample FASTA</button>
+                  <a className="file-control" href="/samples/klebsiella-demo.fasta" download><Download size={12} /> Download sample</a>
                   <button type="button" className="file-control choose-file" onClick={() => fileInputRef.current?.click()}><Upload size={12} /> Choose FASTA file</button>
                   <input ref={fileInputRef} className="native-file-input" type="file" accept=".fasta,.fa,.fna,text/plain" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 5_000_000) { setError("The selected file is larger than the 5 MB limit."); return; } const contents = await file.text(); setFasta(contents); setIsExampleFasta(false); resetUploadChecks(); event.target.value = ""; }} />
                 </div>
               </div>
+              <p className="fasta-format"><strong>Expected format</strong><code>&gt;isolate-name<br />ACGTACGTACGT...</code><span>Whole-genome assemblies may contain multiple FASTA records. Maximum uncompressed file size: 5 MB.</span></p>
               <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); setIsExampleFasta(false); resetUploadChecks(); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
