@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
-  CircleDot,
   Dna,
   FlaskConical,
   Layers3,
@@ -98,8 +97,6 @@ function Results({ result }: { result: Analysis }) {
         </div>
       </div>
 
-      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
-
       <section className="result-grid">
         <article className="panel cocktail-card">
           <div className="panel-heading">
@@ -130,7 +127,6 @@ function Results({ result }: { result: Analysis }) {
           <div className="profile-line"><span>K locus</span><strong>{result.isolate.k_locus}</strong></div>
           <span className="profile-label">Resistance markers</span>
           <div className="tag-list">{result.isolate.resistance.map((tag) => <span key={tag}>{tag}</span>)}</div>
-          <div className="model-chip"><CircleDot size={14} />{result.model}</div>
           {result.sequence_qc && (
             <div className="qc-card">
               <strong>Sequence QC: {result.sequence_qc.status}</strong>
@@ -161,10 +157,9 @@ function ResearchResults({ result }: { result: ResearchRank }) {
         <div>
           <span className="eyebrow"><Network size={14} /> HELD-OUT RESEARCH BENCHMARK</span>
           <h1>Real-model ranking for <em>{result.host_id}</em></h1>
-          <p>{result.feature_source} · {result.model_version}</p>
+          <p>Ranked against the available phage catalog</p>
         </div>
       </div>
-      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
       <section className="panel blocked-panel">
         <AlertTriangle size={24} />
         <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2>
@@ -188,8 +183,7 @@ function ResearchResults({ result }: { result: ResearchRank }) {
 function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
-      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.model_version} · {result.species_ani_percent.toFixed(2)}% species ANI</p></div></div>
-      <div className="validation-banner"><ShieldCheck size={18} /><strong>{result.disclaimer}</strong></div>
+      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div></div>
       <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2><p>Real cocktails require reviewed genomic metadata and laboratory confirmation.</p></div></section>
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
@@ -211,7 +205,7 @@ export default function App() {
   const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
   const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
   const [isolateEmbedding, setIsolateEmbedding] = useState<IsolateEmbedding | null>(null);
-  const [fasta, setFasta] = useState(demoFasta);
+  const [fasta, setFasta] = useState("");
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
@@ -238,7 +232,7 @@ export default function App() {
       entries.forEach((entry) => entry.target.classList.toggle("is-visible", entry.isIntersecting));
     }, { threshold: 0.12 });
     const timer = window.setTimeout(() => {
-      document.querySelectorAll(".panel, .results-head, .validation-banner, .flow-strip").forEach((element) => {
+      document.querySelectorAll(".panel, .results-head, .flow-strip").forEach((element) => {
         element.classList.add("scroll-reveal");
         observer.observe(element);
       });
@@ -302,12 +296,13 @@ export default function App() {
         </section>
 
         <section className="input-panel panel">
-          <div className="panel-top"><span>01</span><div><h2>Choose an isolate</h2></div></div>
+          <div className="panel-top"><span>01</span><div><h2>Choose your input</h2></div></div>
           <div className="tabs">
-            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Demo cases</button>
-            <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Upload FASTA</button>
-            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Real benchmark</button>
+            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Try a sample</button>
+            <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Use my FASTA</button>
+            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Test dataset</button>
           </div>
+          <p className="mode-help">{mode === "demo" ? "Select a prepared Klebsiella case to see the complete workflow." : mode === "upload" ? "Choose a bacterial genome assembly in FASTA format, or load the included example." : "Choose a held-out isolate to inspect benchmark ranking performance."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
@@ -324,23 +319,13 @@ export default function App() {
             <div className="upload-area">
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
-                <label className="file-control">
-                  <Upload size={12} /> Choose .fasta
-                  <input
-                    type="file"
-                    accept=".fasta,.fa,.fna,text/plain"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }
-                    }}
-                  />
-                </label>
+                <div className="input-actions"><button type="button" className="file-control" onClick={() => setFasta(demoFasta)}>Load example</button><label className="file-control"><Upload size={12} /> Choose file<input type="file" accept=".fasta,.fa,.fna,text/plain" onChange={async (event) => { const file = event.target.files?.[0]; if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); } }} /></label></div>
               </div>
               <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
                   <strong>Real pipeline: {capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked locally"}</strong>
-                  <span>{capabilities.novel_isolate_pipeline_ready ? capabilities.esm2_model : `Missing: ${capabilities.blockers.join(", ")}`}</span>
+                  <span>{capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
                 </div>
               )}
               <button className="inspect-button" onClick={async () => {
@@ -374,22 +359,22 @@ export default function App() {
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>
               {modelStatus && <div className="inspection-result">
-                <strong>{modelStatus.model.replace("xgboost.", "")} · {modelStatus.candidate_phages} phages</strong>
+                <strong>{modelStatus.candidate_phages} candidate phages</strong>
                 <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}% · Average precision {modelStatus.test_metrics.average_precision.toFixed(3)}</span>
                 <small>{modelStatus.benchmark_hosts} held-out hosts · internal benchmark</small>
               </div>}
             </div>
           )}
 
-          {mode !== "research" && <div className="size-picker"><span>Cocktail size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
+          {mode !== "research" && <div className="size-picker"><span>02 · Choose shortlist size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
           {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
-          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "research" && !researchHost)}>
-            {loading ? <><LoaderCircle className="spin" size={18} />Running compatibility model…</> : <>{mode === "research" ? "Run held-out benchmark" : mode === "upload" && capabilities?.novel_isolate_pipeline_ready ? "Run real catalog ranking" : "Run candidate discovery"} <ArrowRight size={18} /></>}
+          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "upload" && !fasta.trim()) || (mode === "research" && !researchHost)}>
+            {loading ? <><LoaderCircle className="spin" size={18} />Analyzing…</> : <>{mode === "research" ? "02 · Run benchmark" : "03 · Generate phage shortlist"} <ArrowRight size={18} /></>}
           </button>
           <p className="privacy"><ShieldCheck size={13} /> Runs locally.</p>
         </section>
       </main>
-      <footer><span>PHAGE-X / 24H MVP</span></footer>
+      <footer><span>PHAGE-X</span><span>Research output only · laboratory validation required</span></footer>
     </div>
   );
 }
@@ -401,7 +386,7 @@ function Header({ onBack }: { onBack?: () => void }) {
         {onBack && <button className="header-back" onClick={onBack}><ArrowLeft size={16} /> Back</button>}
         <div className="brand-mark"><Dna size={20} /><strong>PHAGE<span>—X</span></strong></div>
       </div>
-      <div className="header-meta"><span>K. pneumoniae</span><i /><span>v0.1</span></div>
+      <div className="header-meta"><span>K. pneumoniae</span></div>
     </header>
   );
 }
