@@ -328,6 +328,7 @@ export default function App() {
   return (
     <div className="app">
       <Header />
+      <DnaBackdrop />
       <main className="page-shell hero-layout">
         <section className="hero-stage">
           <div className="hero-copy">
@@ -342,7 +343,7 @@ export default function App() {
             </div>
             <button className="hero-cta" onClick={() => document.querySelector(".input-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Start analysis <ArrowRight size={17} /></button>
           </div>
-          <div className="hero-visual"><DnaBackdrop /><span>GENOME / RECEPTOR / MATCH</span></div>
+          <div className="hero-visual"><span>GENOME / RECEPTOR / MATCH</span></div>
         </section>
 
         <section className="scroll-story" aria-label="How PHAGE-X works">
@@ -352,7 +353,7 @@ export default function App() {
             <p>The sequence pipeline checks the assembly, confirms the species, identifies the capsule locus, and turns its proteins into comparable features.</p>
             <small>Input → assembly QC → capsule-locus proteins → embedding</small>
           </article>
-          <article className="story-card story-right">
+          <article className="story-card">
             <span>02 / RANK</span>
             <h2>Search fewer candidates.</h2>
             <p>The compatibility model compares the isolate representation with receptor-binding-protein features and orders the available phage catalog.</p>
