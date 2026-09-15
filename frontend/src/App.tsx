@@ -244,7 +244,7 @@ function ScoreRing({ value, size = 74 }: { value: number; size?: number }) {
 function ExportResult({ data, name, href: downloadHref }: { data: unknown; name: string; href?: string }) {
   const filename = `${name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-phage-ranking.json`;
   const href = downloadHref || `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
-  return <a className="result-export" href={href} download={filename}><Download size={14} /> Export results</a>;
+  return <a className="result-export" href={href} download={downloadHref ? undefined : filename}><Download size={14} /> Download PDF</a>;
 }
 
 function EvidenceReviewNotice() {
