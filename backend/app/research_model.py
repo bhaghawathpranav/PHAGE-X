@@ -47,6 +47,7 @@ class ResearchModel:
             "benchmark_hosts": len(self.host_ids),
             "candidate_phages": len(self.phage_ids),
             "dataset_doi": self.card["dataset_doi"],
+            "model": self.card["model"],
         }
 
     def rank(self, host_id: str, limit: int) -> ResearchRankResponse:

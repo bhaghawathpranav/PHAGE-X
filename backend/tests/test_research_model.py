@@ -7,6 +7,7 @@ def test_research_artifact_is_blocked_from_release():
     assert status["release_approved"] is False
     assert status["benchmark_hosts"] > 0
     assert status["candidate_phages"] == 105
+    assert status["model"] == "xgboost.XGBClassifier"
 
 
 def test_held_out_host_ranking_uses_real_embeddings_and_blocks_cocktail():

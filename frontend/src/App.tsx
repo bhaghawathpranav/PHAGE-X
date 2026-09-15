@@ -16,8 +16,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
-import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchRank } from "./types";
+import { analyze, embedIsolateLocus, extractIsolateLocus, getIsolates, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost } from "./api";
+import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
 const demoFasta = `>KPN-demo-upload
 ACGTGGCTAACGTTGACCGTACGATCGATGCTAGCTACGATGCTAGGCTAACCGTTAGCATCGATCGTACGATGCTAGCTAGCGATCGTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTAACGTAGCTAGCATCGATCGATGCTAGCTA`;
@@ -206,6 +206,7 @@ export default function App() {
   const [mode, setMode] = useState<"demo" | "upload" | "research">("demo");
   const [researchIsolates, setResearchIsolates] = useState<string[]>([]);
   const [researchHost, setResearchHost] = useState("");
+  const [modelStatus, setModelStatus] = useState<ResearchModelStatus | null>(null);
   const [capabilities, setCapabilities] = useState<ProcessingCapabilities | null>(null);
   const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
   const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
@@ -223,6 +224,7 @@ export default function App() {
     getIsolates().then(setIsolates).catch((err) => setError(err.message));
     getResearchIsolates().then((items) => { setResearchIsolates(items); setResearchHost(items[0] || ""); }).catch((err) => setError(err.message));
     getProcessingCapabilities().then(setCapabilities).catch(() => undefined);
+    getResearchModelStatus().then(setModelStatus).catch(() => undefined);
   }, []);
 
   const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
@@ -344,6 +346,11 @@ export default function App() {
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>
               <p><Info size={14} />This path uses the trained model and real released ESM-2 embeddings. Cocktail construction stays blocked.</p>
+              {modelStatus && <div className="inspection-result">
+                <strong>{modelStatus.model.replace("xgboost.", "")} · {modelStatus.candidate_phages} phages</strong>
+                <span>Test AUROC {modelStatus.test_metrics.roc_auc.toFixed(3)} · Top-5 recall {Math.round(modelStatus.test_metrics.top_5_host_recall * 100)}% · Average precision {modelStatus.test_metrics.average_precision.toFixed(3)}</span>
+                <small>{modelStatus.benchmark_hosts} held-out hosts · Internal benchmark only · Release {modelStatus.release_approved ? "approved" : "blocked"}</small>
+              </div>}
             </div>
           )}
 

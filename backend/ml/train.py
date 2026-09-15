@@ -9,7 +9,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import sklearn
-from sklearn.ensemble import HistGradientBoostingClassifier
+import xgboost
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
@@ -23,19 +23,26 @@ from .dataset import (
 from .registry import write_release_manifest
 
 
-def _new_model() -> HistGradientBoostingClassifier:
-    return HistGradientBoostingClassifier(
-        max_iter=350,
-        max_leaf_nodes=15,
+def _new_model(scale_pos_weight: float) -> xgboost.XGBClassifier:
+    return xgboost.XGBClassifier(
+        n_estimators=350,
+        max_depth=4,
         learning_rate=0.04,
-        l2_regularization=2.0,
-        class_weight="balanced",
+        reg_lambda=2.0,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        scale_pos_weight=scale_pos_weight,
+        eval_metric="logloss",
+        n_jobs=1,
         random_state=41,
     )
 
 
 def _fit_and_score(dataset, train, validation, test):
-    model = _new_model()
+    train_labels = dataset.y[train]
+    positives = int(train_labels.sum())
+    scale_pos_weight = float((len(train_labels) - positives) / positives)
+    model = _new_model(scale_pos_weight)
     model.fit(dataset.X[train], dataset.y[train])
     validation_raw = model.predict_proba(dataset.X[validation])[:, 1]
     calibrator = LogisticRegression(random_state=41, solver="liblinear").fit(
@@ -124,7 +131,7 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
         reverse=True,
     )
     report = {
-        "artifact_version": "phagex-hgb-0.1.0",
+        "artifact_version": "phagex-xgboost-0.2.0",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "research_only": True,
         "dataset_doi": "10.5281/zenodo.11061100",
@@ -157,7 +164,7 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
             "approved": False,
             "reason": "External validation, genomic safety evidence, and independent review are not complete."
         },
-        "model": "sklearn.HistGradientBoostingClassifier",
+        "model": "xgboost.XGBClassifier",
         "feature_importance": feature_importance,
         "abstention": {
             "rule": "abstain when calibrated probability is between 0.35 and 0.65",
@@ -173,6 +180,7 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
             "python": platform.python_version(),
             "numpy": np.__version__,
             "scikit_learn": sklearn.__version__,
+            "xgboost": xgboost.__version__,
         },
         "limitations": [
             "Unobserved pairs are study labels and may include unknown rather than confirmed-negative interactions.",

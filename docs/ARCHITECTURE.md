@@ -26,7 +26,6 @@ Scores are relative ranking signals, not calibrated clinical probabilities. Ther
 
 - Replace FASTA hashing with QC, species confirmation, MLST/K-locus calling, RBP features, and cached ESM-2 inference.
 - Replace JSON with a versioned PhageHostLearn-derived feature store carrying provenance.
-- Replace `PX-Linear` with trained/calibrated XGBoost plus SHAP and held-out-isolate evaluation.
+- The real benchmark uses a trained and calibrated XGBoost classifier with held-out-isolate evaluation; SHAP review against biological expectations remains future validation work.
 - Extend optimization with receptor independence, phylogenetic distance, escape-mutant cross-resistance, and uncertainty.
 - Add laboratory results as explicit feedback without silently converting predictions into validated claims.
-

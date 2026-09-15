@@ -1,3 +1,2 @@
 -r requirements-ml.txt
-xgboost==2.1.4
-
+# XGBoost is part of the runtime requirements; this compatibility file remains for existing setup commands.

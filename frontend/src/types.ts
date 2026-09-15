@@ -68,6 +68,22 @@ export type ResearchRank = {
   disclaimer: string;
 };
 
+export type ResearchModelStatus = {
+  artifact_version: string;
+  model: string;
+  release_approved: boolean;
+  release_reason: string;
+  test_metrics: {
+    roc_auc: number;
+    average_precision: number;
+    brier_score: number;
+    top_3_host_recall: number;
+    top_5_host_recall: number;
+  };
+  benchmark_hosts: number;
+  candidate_phages: number;
+};
+
 export type ProcessingCapabilities = {
   novel_isolate_pipeline_ready: boolean;
   tools: Record<string, boolean>;
