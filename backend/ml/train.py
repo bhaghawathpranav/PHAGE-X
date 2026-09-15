@@ -12,7 +12,19 @@ import sklearn
 import xgboost
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    balanced_accuracy_score,
+    brier_score_loss,
+    confusion_matrix,
+    f1_score,
+    matthews_corrcoef,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 from .dataset import (
     grouped_three_way_split,
     load_pair_dataset,
@@ -38,6 +50,38 @@ def _new_model(scale_pos_weight: float) -> xgboost.XGBClassifier:
     )
 
 
+def _validation_threshold(labels: np.ndarray, probabilities: np.ndarray) -> float:
+    """Choose the F1-optimal threshold using validation data only."""
+    precision, recall, thresholds = precision_recall_curve(labels, probabilities)
+    if not len(thresholds):
+        return 0.5
+    f1 = 2 * precision[:-1] * recall[:-1] / np.maximum(precision[:-1] + recall[:-1], 1e-12)
+    return float(thresholds[int(np.argmax(f1))])
+
+
+def _binary_metrics(labels: np.ndarray, probabilities: np.ndarray, threshold: float) -> dict[str, float | int]:
+    predictions = (probabilities >= threshold).astype(np.int8)
+    tn, fp, fn, tp = confusion_matrix(labels, predictions, labels=[0, 1]).ravel()
+    specificity = float(tn / (tn + fp)) if tn + fp else 0.0
+    return {
+        "decision_threshold": float(threshold),
+        "roc_auc": float(roc_auc_score(labels, probabilities)),
+        "average_precision": float(average_precision_score(labels, probabilities)),
+        "brier_score": float(brier_score_loss(labels, probabilities)),
+        "accuracy": float(accuracy_score(labels, predictions)),
+        "balanced_accuracy": float(balanced_accuracy_score(labels, predictions)),
+        "precision": float(precision_score(labels, predictions, zero_division=0)),
+        "recall": float(recall_score(labels, predictions, zero_division=0)),
+        "specificity": specificity,
+        "f1": float(f1_score(labels, predictions, zero_division=0)),
+        "matthews_correlation": float(matthews_corrcoef(labels, predictions)),
+        "true_negatives": int(tn),
+        "false_positives": int(fp),
+        "false_negatives": int(fn),
+        "true_positives": int(tp),
+    }
+
+
 def _fit_and_score(dataset, train, validation, test):
     train_labels = dataset.y[train]
     positives = int(train_labels.sum())
@@ -48,12 +92,12 @@ def _fit_and_score(dataset, train, validation, test):
     calibrator = LogisticRegression(random_state=41, solver="liblinear").fit(
         validation_raw.reshape(-1, 1), dataset.y[validation]
     )
+    validation_probabilities = calibrator.predict_proba(validation_raw.reshape(-1, 1))[:, 1]
+    threshold = _validation_threshold(dataset.y[validation], validation_probabilities)
     raw = model.predict_proba(dataset.X[test])[:, 1]
     probabilities = calibrator.predict_proba(raw.reshape(-1, 1))[:, 1]
     metrics = {
-        "roc_auc": float(roc_auc_score(dataset.y[test], probabilities)),
-        "average_precision": float(average_precision_score(dataset.y[test], probabilities)),
-        "brier_score": float(brier_score_loss(dataset.y[test], probabilities)),
+        **_binary_metrics(dataset.y[test], probabilities, threshold),
         "top_3_host_recall": float(top_k_recall(dataset.y[test], probabilities, dataset.hosts[test], 3)),
         "top_5_host_recall": float(top_k_recall(dataset.y[test], probabilities, dataset.hosts[test], 5)),
     }
@@ -131,7 +175,7 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
         reverse=True,
     )
     report = {
-        "artifact_version": "phagex-xgboost-0.2.0",
+        "artifact_version": "phagex-xgboost-0.3.0",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "research_only": True,
         "dataset_doi": "10.5281/zenodo.11061100",
@@ -193,7 +237,15 @@ def main(data_dir: Path, manifest: Path, output_dir: Path, repeats: int = 5) -> 
     model_path = output_dir / "model.joblib"
     model_card_path = output_dir / "model_card.json"
     catalog_path = output_dir / "runtime_catalog.npz"
-    joblib.dump({"model": model, "calibrator": calibrator, "feature_names": dataset.feature_names}, model_path)
+    joblib.dump(
+        {
+            "model": model,
+            "calibrator": calibrator,
+            "feature_names": dataset.feature_names,
+            "decision_threshold": metrics["decision_threshold"],
+        },
+        model_path,
+    )
     model_card_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     write_runtime_catalog(data_dir, dataset.hosts[test], catalog_path)
     write_release_manifest(model_path, model_card_path, output_dir / "release_manifest.json", catalog_path)
