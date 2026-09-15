@@ -1,0 +1,9 @@
+{
+  "dataset": "PhageHostLearn training and test data",
+  "doi": "10.5281/zenodo.11061100",
+  "license": "CC-BY-4.0",
+  "files": [
+    {"filename": "phages_genomes.zip", "md5": "f43159fd3473e2d22a56fec27e8d443c", "sha256": "1941cfb11b924cde4e5259d308745f89d0acc697879ce771def617e7d97756dc"},
+    {"filename": "RBPbase.csv", "md5": "fc235f3acfcd4dcadb71527bdf6704a3", "sha256": "3e1b820993a240b1faa12547c6b1a796585b8f40c3dc777c2ae3a9afbf1e0dce"}
+  ]
+}

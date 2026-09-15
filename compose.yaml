@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: ./backend
+    environment:
+      PHAGEX_ENVIRONMENT: production
+      PHAGEX_ALLOWED_ORIGINS: ${PHAGEX_ALLOWED_ORIGINS:-http://localhost:8080}
+      PHAGEX_VERSION: ${PHAGEX_VERSION:-0.2.0}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PHAGEX_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+

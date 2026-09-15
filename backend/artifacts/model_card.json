@@ -1,0 +1,253 @@
+{
+  "artifact_version": "phagex-xgboost-0.2.0",
+  "created_at": "2026-09-15T04:49:13.007303+00:00",
+  "research_only": true,
+  "dataset_doi": "10.5281/zenodo.11061100",
+  "source_sha256": {
+    "phage_host_interactions.csv": "b9d8822ca73de87036bfe46c05db5e8efc1a31804a7ea07915cf1503d9d8c8c1",
+    "esm2_embeddings_loci.csv": "e448936b34755bea473978710cd39c046fd8174381029e0ca8c455226c549e59",
+    "esm2_embeddings_rbp.csv": "c282a434f92b6702d54baa821adcdb563070020e9b9fe29a045a1515e53bc990",
+    "esm2_embeddings_loci_invitro.csv": "62d9b27eb3f36c8e0af77e0f39d512178863ef73c274dda54954bcd4de622e96",
+    "phages_genomes.zip": "1941cfb11b924cde4e5259d308745f89d0acc697879ce771def617e7d97756dc",
+    "RBPbase.csv": "3e1b820993a240b1faa12547c6b1a796585b8f40c3dc777c2ae3a9afbf1e0dce"
+  },
+  "feature_names": [
+    "cosine_similarity",
+    "euclidean_distance",
+    "absolute_difference_mean",
+    "absolute_difference_std",
+    "absolute_difference_max",
+    "element_product_mean",
+    "element_product_std",
+    "element_product_max",
+    "host_embedding_norm",
+    "phage_embedding_norm",
+    "rbp_count"
+  ],
+  "split_policy": "host-disjoint 70/15/15 grouped split, seed 41",
+  "counts": {
+    "pairs": 10006,
+    "positives": 333,
+    "hosts": 200,
+    "phages": 105,
+    "train_pairs": 6979,
+    "validation_pairs": 1543,
+    "test_pairs": 1484
+  },
+  "runtime_catalog": {
+    "host_split": "fixed seed-41 test hosts only",
+    "host_ids": [
+      "201KP-HG",
+      "2164",
+      "228",
+      "CU276",
+      "CU293",
+      "CU503",
+      "ERS685294",
+      "ERS686706",
+      "ERS702130",
+      "ERS702132",
+      "ERS706555",
+      "ERS747612",
+      "ERS764450",
+      "ERS799797",
+      "HCV1_35",
+      "HGV2C_02",
+      "HGV2C_20",
+      "HGV2C_37",
+      "HGV2_370",
+      "HLF1_40",
+      "HLF1_54",
+      "KP_HGE01_042",
+      "KP_HGE01_045",
+      "KP_HGUA02_051",
+      "KP_HGUA02_055",
+      "KP_HGUA02_064",
+      "KP_HGUA03_117",
+      "Kpcas054",
+      "Moliner_02",
+      "Moliner_08"
+    ],
+    "phage_count": 105
+  },
+  "metrics": {
+    "roc_auc": 0.8865990598885795,
+    "average_precision": 0.32395359000340357,
+    "brier_score": 0.026451323837593604,
+    "top_3_host_recall": 0.7894736842105263,
+    "top_5_host_recall": 0.8421052631578947
+  },
+  "host_bootstrap_95_ci": {
+    "roc_auc": {
+      "lower_95": 0.8091274350216066,
+      "upper_95": 0.9456895374456034
+    },
+    "average_precision": {
+      "lower_95": 0.17427110155839978,
+      "upper_95": 0.5445510816016761
+    },
+    "brier_score": {
+      "lower_95": 0.01484197583829455,
+      "upper_95": 0.03844174986395652
+    }
+  },
+  "calibration": {
+    "expected_calibration_error": 0.021551782127716808,
+    "bins": [
+      {
+        "lower": 0.0,
+        "upper": 0.1,
+        "count": 1381,
+        "predicted": 0.029313110215127083,
+        "observed": 0.013758146270818247
+      },
+      {
+        "lower": 0.1,
+        "upper": 0.2,
+        "count": 60,
+        "predicted": 0.13812230857641,
+        "observed": 0.15
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.30000000000000004,
+        "count": 39,
+        "predicted": 0.24289419490627934,
+        "observed": 0.48717948717948717
+      },
+      {
+        "lower": 0.30000000000000004,
+        "upper": 0.4,
+        "count": 4,
+        "predicted": 0.315412896592683,
+        "observed": 0.25
+      }
+    ]
+  },
+  "repeated_host_holdout": {
+    "repeats": 5,
+    "seeds": [
+      100,
+      101,
+      102,
+      103,
+      104
+    ],
+    "summary": {
+      "roc_auc": {
+        "mean": 0.7683635886141923,
+        "std": 0.04095513476645821,
+        "min": 0.7152423431460007,
+        "max": 0.8326941135209133
+      },
+      "average_precision": {
+        "mean": 0.26389380684632935,
+        "std": 0.05898897666222911,
+        "min": 0.1749746110085848,
+        "max": 0.35478222964269307
+      },
+      "brier_score": {
+        "mean": 0.03095802463252518,
+        "std": 0.003639593523569501,
+        "min": 0.026758055014127983,
+        "max": 0.03553430286491277
+      },
+      "top_3_host_recall": {
+        "mean": 0.6710868079289132,
+        "std": 0.030403969366262166,
+        "min": 0.6363636363636364,
+        "max": 0.7142857142857143
+      },
+      "top_5_host_recall": {
+        "mean": 0.7758259284575074,
+        "std": 0.027215516338310188,
+        "min": 0.7368421052631579,
+        "max": 0.8181818181818182
+      }
+    }
+  },
+  "release_decision": {
+    "approved": false,
+    "reason": "External validation, genomic safety evidence, and independent review are not complete."
+  },
+  "model": "xgboost.XGBClassifier",
+  "feature_importance": [
+    {
+      "feature": "absolute_difference_mean",
+      "mean": 0.14839550942624036,
+      "std": 0.010888038352378233
+    },
+    {
+      "feature": "element_product_mean",
+      "mean": 0.11364464121215395,
+      "std": 0.017287030931875603
+    },
+    {
+      "feature": "element_product_max",
+      "mean": 0.0779740212405757,
+      "std": 0.022548222675502612
+    },
+    {
+      "feature": "host_embedding_norm",
+      "mean": 0.06893145667224704,
+      "std": 0.022389993961281253
+    },
+    {
+      "feature": "absolute_difference_max",
+      "mean": 0.06780488484472642,
+      "std": 0.019477974836979127
+    },
+    {
+      "feature": "absolute_difference_std",
+      "mean": 0.06261566064867068,
+      "std": 0.017784004056386613
+    },
+    {
+      "feature": "euclidean_distance",
+      "mean": 0.04457497477771739,
+      "std": 0.009524449062091003
+    },
+    {
+      "feature": "cosine_similarity",
+      "mean": 0.04091642413653591,
+      "std": 0.023626980340877058
+    },
+    {
+      "feature": "element_product_std",
+      "mean": 0.03996802674376632,
+      "std": 0.014595040203314157
+    },
+    {
+      "feature": "phage_embedding_norm",
+      "mean": 0.023389826661460306,
+      "std": 0.022360672648749903
+    },
+    {
+      "feature": "rbp_count",
+      "mean": 0.019524868468074233,
+      "std": 0.015230356554027458
+    }
+  ],
+  "abstention": {
+    "rule": "abstain when calibrated probability is between 0.35 and 0.65",
+    "test_fraction": 0.0,
+    "decided_pairs": 1484
+  },
+  "error_analysis": {
+    "false_positive_count_at_0_65": 0,
+    "false_negative_count_at_0_35": 48,
+    "note": "Study-negative labels may represent untested or unknown interactions, not confirmed resistance."
+  },
+  "runtime": {
+    "python": "3.9.6",
+    "numpy": "2.0.2",
+    "scikit_learn": "1.6.1",
+    "xgboost": "2.1.4"
+  },
+  "limitations": [
+    "Unobserved pairs are study labels and may include unknown rather than confirmed-negative interactions.",
+    "Metrics from a single deterministic split are insufficient for scientific release.",
+    "The compact pair features do not reproduce the complete published multi-instance architecture.",
+    "No clinical or laboratory-use claim is supported by this artifact."
+  ]
+}
