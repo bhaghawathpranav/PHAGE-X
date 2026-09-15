@@ -1,0 +1,39 @@
+{
+  "research_only": true,
+  "dataset": "PhageHostLearn",
+  "dataset_doi": "10.5281/zenodo.11061100",
+  "split_policy": "Host-disjoint 70/15/15 split",
+  "random_seed": 41,
+  "training_pairs": 6979,
+  "validation_pairs": 1543,
+  "test_pairs": 1484,
+  "training_hosts": 139,
+  "validation_hosts": 31,
+  "test_hosts": 30,
+  "positive_prevalence": 0.03328003198081151,
+  "metrics": {
+    "decision_threshold": 0.15584724807221156,
+    "accuracy": 0.9568733153638814,
+    "balanced_accuracy": 0.7159354688950789,
+    "precision": 0.36666666666666664,
+    "recall": 0.4583333333333333,
+    "specificity": 0.9735376044568245,
+    "f1": 0.4074074074074074,
+    "matthews_correlation": 0.38790126735191116,
+    "roc_auc": 0.885235318012999,
+    "pr_auc_average_precision": 0.31406230947789826,
+    "brier_score": 0.02643069474109796,
+    "top_3_host_recall": 0.8421052631578947,
+    "top_5_host_recall": 0.8947368421052632,
+    "true_negatives": 1398,
+    "false_positives": 38,
+    "false_negatives": 26,
+    "true_positives": 22
+  },
+  "runtime": {
+    "numpy": "2.0.2",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.6.1",
+    "xgboost": "2.1.4"
+  }
+}
