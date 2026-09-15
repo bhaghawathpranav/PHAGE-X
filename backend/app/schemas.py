@@ -26,12 +26,15 @@ class AnalyzeRequest(BaseModel):
     isolate_id: Optional[str] = None
     fasta: Optional[str] = Field(default=None, max_length=5_000_000)
     isolate_name: Optional[str] = Field(default=None, max_length=100)
+    demo_fasta: bool = False
     cocktail_size: int = Field(default=3, ge=2, le=3)
 
     @model_validator(mode="after")
     def require_one_input(self):
         if bool(self.isolate_id) == bool(self.fasta):
             raise ValueError("Provide exactly one of isolate_id or fasta")
+        if self.demo_fasta and not self.fasta:
+            raise ValueError("demo_fasta is valid only with an explicit FASTA demonstration input")
         return self
 
 

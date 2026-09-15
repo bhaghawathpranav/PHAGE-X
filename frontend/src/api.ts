@@ -29,6 +29,7 @@ export async function analyze(payload: {
   isolate_id?: string;
   fasta?: string;
   isolate_name?: string;
+  demo_fasta?: boolean;
   cocktail_size: number;
 }): Promise<Analysis> {
   return parse(

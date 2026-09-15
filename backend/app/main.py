@@ -122,6 +122,11 @@ def run_analysis(request: AnalyzeRequest):
             raise HTTPException(status_code=404, detail="Demo isolate not found")
         input_mode = "preloaded"
     else:
+        if not request.demo_fasta:
+            raise HTTPException(
+                status_code=422,
+                detail="Arbitrary FASTA is not accepted by the demo route. Use /api/jobs/novel-rank for the real uploaded-genome ML pipeline.",
+            )
         try:
             isolate = isolate_from_fasta(request.fasta or "", request.isolate_name)
         except ValueError as error:

@@ -40,8 +40,8 @@ def test_preloaded_case_complete_path():
 
 def test_uploaded_fasta_path_is_deterministic():
     fasta = ">demo\n" + "ACGT" * 40
-    first = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
-    second = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
+    first = client.post("/api/analyze", json={"fasta": fasta, "demo_fasta": True, "cocktail_size": 2})
+    second = client.post("/api/analyze", json={"fasta": fasta, "demo_fasta": True, "cocktail_size": 2})
     assert first.status_code == 200
     assert first.json()["isolate"]["id"] == second.json()["isolate"]["id"]
     assert len(first.json()["cocktail"]["members"]) == 2
@@ -50,22 +50,29 @@ def test_uploaded_fasta_path_is_deterministic():
 
 
 def test_rejects_short_fasta():
-    response = client.post("/api/analyze", json={"fasta": ">short\nACGT", "cocktail_size": 2})
+    response = client.post("/api/analyze", json={"fasta": ">short\nACGT", "demo_fasta": True, "cocktail_size": 2})
     assert response.status_code == 422
 
 
 def test_rejects_multiple_fasta_records():
     fasta = ">one\n" + "ACGT" * 30 + "\n>two\n" + "ACGT" * 30
-    response = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
+    response = client.post("/api/analyze", json={"fasta": fasta, "demo_fasta": True, "cocktail_size": 2})
     assert response.status_code == 422
     assert "exactly one" in response.json()["detail"]
 
 
 def test_flags_ambiguous_sequence_for_review():
     fasta = ">ambiguous\n" + "N" * 20 + "ACGT" * 30
-    response = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
+    response = client.post("/api/analyze", json={"fasta": fasta, "demo_fasta": True, "cocktail_size": 2})
     assert response.status_code == 200
     assert response.json()["sequence_qc"]["status"] == "review"
+
+
+def test_arbitrary_fasta_cannot_silently_use_demo_model():
+    fasta = ">new-isolate\n" + "ACGT" * 40
+    response = client.post("/api/analyze", json={"fasta": fasta, "cocktail_size": 2})
+    assert response.status_code == 422
+    assert "/api/jobs/novel-rank" in response.json()["detail"]
 
 
 def test_assembly_inspection_is_fail_closed_without_toolchain():

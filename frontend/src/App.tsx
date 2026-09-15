@@ -305,13 +305,17 @@ export default function App() {
     try {
       if (mode === "research") {
         setResearchResult(await rankResearchHost(researchHost));
-      } else if (mode === "upload" && capabilities?.novel_isolate_pipeline_ready && !isExampleFasta) {
-        setNovelResult(await rankNovelIsolateInBackground(fasta));
+      } else if (mode === "upload") {
+        if (isExampleFasta) {
+          setResult(await analyze({ fasta, isolate_name: "Sample KPN isolate", demo_fasta: true, cocktail_size: size }));
+        } else {
+          if (!capabilities?.novel_isolate_pipeline_ready) {
+            throw new Error("The real uploaded-genome ML pipeline is unavailable. Install the listed local tools; no demo fallback was used.");
+          }
+          setNovelResult(await rankNovelIsolateInBackground(fasta));
+        }
       } else {
-        const next = await analyze(mode === "demo"
-          ? { isolate_id: selected, cocktail_size: size }
-          : { fasta, isolate_name: "Uploaded KPN isolate", cocktail_size: size });
-        setResult(next);
+        setResult(await analyze({ isolate_id: selected, cocktail_size: size }));
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -415,10 +419,17 @@ export default function App() {
               <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); setIsExampleFasta(false); resetUploadChecks(); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
-                  <strong>Real pipeline: {capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked locally"}</strong>
+                  <strong>{isExampleFasta ? "Sample demonstration" : `Uploaded-genome ML: ${capabilities.novel_isolate_pipeline_ready ? "ready" : "unavailable"}`}</strong>
                   <span>{isExampleFasta ? "The included example uses the instant demonstration path" : capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
                 </div>
               )}
+              {!isExampleFasta && <div className="ml-path">
+                <div><span>01</span><strong>Assembly QC</strong><small>Validate the uploaded genome</small></div>
+                <div><span>02</span><strong>Species + capsule</strong><small>fastANI and Kaptive</small></div>
+                <div><span>03</span><strong>Protein features</strong><small>Local ESM-2 embeddings</small></div>
+                <div><span>04</span><strong>Phage ranking</strong><small>Calibrated XGBoost, 105 phages</small></div>
+                <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
+              </div>}
               <button className="inspect-button" onClick={async () => {
                 setError("");
                 const validationError = validateFastaInput(fasta);
@@ -461,8 +472,8 @@ export default function App() {
 
           {mode !== "research" && <div className="size-picker"><span>02 · Choose shortlist size</span><div>{[2, 3].map((n) => <button className={size === n ? "active" : ""} onClick={() => setSize(n)} key={n}>{n} phages</button>)}</div></div>}
           {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
-          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "upload" && !fasta.trim()) || (mode === "research" && !researchHost)}>
-            {loading ? <><LoaderCircle className="spin" size={18} />Analyzing…</> : <>{mode === "research" ? "02 · Run benchmark" : "03 · Generate phage shortlist"} <ArrowRight size={18} /></>}
+          <button className="run-button" onClick={run} disabled={loading || (mode === "demo" && !active) || (mode === "upload" && (!fasta.trim() || (!isExampleFasta && !capabilities?.novel_isolate_pipeline_ready))) || (mode === "research" && !researchHost)}>
+            {loading ? <><LoaderCircle className="spin" size={18} />Analyzing…</> : <>{mode === "research" ? "02 · Run benchmark" : mode === "upload" && !isExampleFasta ? capabilities?.novel_isolate_pipeline_ready ? "03 · Run real ML ranking" : "Real ML pipeline unavailable" : "03 · Generate phage shortlist"} <ArrowRight size={18} /></>}
           </button>
           <p className="privacy"><ShieldCheck size={13} /> Runs locally.</p>
         </section>
