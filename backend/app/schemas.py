@@ -222,11 +222,24 @@ class NovelIsolateRankResponse(BaseModel):
     feature_sha256: str
     distribution_status: str
     nearest_reference_cosine: float
+
+    # Existing ML output
     candidates: List[ResearchCandidate]
+
+    # Existing cocktail fields
     cocktail_status: str
     cocktail_blockers: List[str]
-    disclaimer: str
 
+    # -------- SHIVA'S NEW FIELDS --------
+    cocktail_members: List[str]
+    cocktail_objective_score: float | None
+    cocktail_mean_compatibility: float | None
+    cocktail_family_diversity: float | None
+    cocktail_receptor_diversity: float | None
+    cocktail_redundancy: float | None
+    # -----------------------------------
+
+    disclaimer: str
 
 class JobResponse(BaseModel):
     job_id: str

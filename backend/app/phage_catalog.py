@@ -13,6 +13,15 @@ DATA_DIR = Path(__file__).parent.parent / "data" / "phages"
 
 
 def _sha256(path: Path) -> str:
+    """
+    Compute SHA256. Normalize CSV line endings so the catalog
+    works on Windows (CRLF) and Linux/macOS (LF).
+    """
+    if path.suffix == ".csv":
+        text = path.read_text(encoding="utf-8")
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
