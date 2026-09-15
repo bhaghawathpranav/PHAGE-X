@@ -327,19 +327,22 @@ export default function App() {
 
   return (
     <div className="app">
-      <DnaBackdrop />
       <Header />
       <main className="page-shell hero-layout">
-        <section className="hero-copy">
-          <span className="eyebrow">AI-GUIDED PHAGE DISCOVERY</span>
-          <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
-          <p className="lead">Rank phages. Build complementary cocktails. Validate in the lab.</p>
-          <div className="flow-strip">
-            <div><Microscope /><span>Isolate</span></div><ArrowRight />
-            <div><Network /><span>Embedding</span></div><ArrowRight />
-            <div><Layers3 /><span>Ranking</span></div><ArrowRight />
-            <div><FlaskConical /><span>Validate</span></div>
+        <section className="hero-stage">
+          <div className="hero-copy">
+            <span className="eyebrow">AI-GUIDED PHAGE DISCOVERY</span>
+            <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
+            <p className="lead">Rank phages. Build complementary cocktails. Validate in the lab.</p>
+            <div className="flow-strip">
+              <div><Microscope /><span>Isolate</span></div><ArrowRight />
+              <div><Network /><span>Embedding</span></div><ArrowRight />
+              <div><Layers3 /><span>Ranking</span></div><ArrowRight />
+              <div><FlaskConical /><span>Validate</span></div>
+            </div>
+            <button className="hero-cta" onClick={() => document.querySelector(".input-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Start analysis <ArrowRight size={17} /></button>
           </div>
+          <div className="hero-visual"><DnaBackdrop /><span>GENOME / RECEPTOR / MATCH</span></div>
         </section>
 
         <section className="scroll-story" aria-label="How PHAGE-X works">
