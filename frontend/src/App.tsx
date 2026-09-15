@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -206,6 +206,7 @@ export default function App() {
   const [locusExtraction, setLocusExtraction] = useState<IsolateLocusExtraction | null>(null);
   const [isolateEmbedding, setIsolateEmbedding] = useState<IsolateEmbedding | null>(null);
   const [fasta, setFasta] = useState("");
+  const [isExampleFasta, setIsExampleFasta] = useState(false);
   const [size, setSize] = useState(3);
   const [result, setResult] = useState<Analysis | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchRank | null>(null);
@@ -213,6 +214,24 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [featureLoading, setFeatureLoading] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function resetUploadChecks() {
+    setInspection(null);
+    setLocusExtraction(null);
+    setIsolateEmbedding(null);
+    setError("");
+  }
+
+  function validateFastaInput(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) return "Choose a FASTA file or load the example first.";
+    if (!trimmed.startsWith(">")) return "FASTA must begin with a header line starting with >, followed by the DNA sequence.";
+    const bases = trimmed.split(/\r?\n/).filter((line) => !line.startsWith(">") && line.trim()).join("").replace(/\s/g, "");
+    if (bases.length < 100) return "This sequence is too short. Provide at least 100 DNA bases.";
+    if (/[^ACGTN]/i.test(bases)) return "The sequence contains unsupported characters. Use only A, C, G, T, or N.";
+    return null;
+  }
 
   useEffect(() => {
     let frame = 0;
@@ -252,12 +271,16 @@ export default function App() {
   const active = useMemo(() => isolates.find((item) => item.id === selected), [isolates, selected]);
 
   async function run() {
+    if (mode === "upload") {
+      const validationError = validateFastaInput(fasta);
+      if (validationError) { setError(validationError); return; }
+    }
     setLoading(true);
     setError("");
     try {
       if (mode === "research") {
         setResearchResult(await rankResearchHost(researchHost));
-      } else if (mode === "upload" && capabilities?.novel_isolate_pipeline_ready) {
+      } else if (mode === "upload" && capabilities?.novel_isolate_pipeline_ready && !isExampleFasta) {
         setNovelResult(await rankNovelIsolateInBackground(fasta));
       } else {
         const next = await analyze(mode === "demo"
@@ -299,9 +322,9 @@ export default function App() {
           <div className="tabs">
             <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>Try a sample</button>
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Use my FASTA</button>
-            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Test dataset</button>
+            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Model benchmark</button>
           </div>
-          <p className="mode-help">{mode === "demo" ? "Select a prepared Klebsiella case to see the complete workflow." : mode === "upload" ? "Choose a bacterial genome assembly in FASTA format, or load the included example." : "Choose a held-out isolate to inspect benchmark ranking performance."}</p>
+          <p className="mode-help">{mode === "demo" ? "Select a prepared Klebsiella case to see the complete workflow." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance—not to analyze your own sequence."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
@@ -318,17 +341,23 @@ export default function App() {
             <div className="upload-area">
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>
-                <div className="input-actions"><button type="button" className="file-control" onClick={() => setFasta(demoFasta)}>Load example</button><label className="file-control"><Upload size={12} /> Choose file<input type="file" accept=".fasta,.fa,.fna,text/plain" onChange={async (event) => { const file = event.target.files?.[0]; if (file) { setFasta(await file.text()); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); } }} /></label></div>
+                <div className="input-actions">
+                  <button type="button" className="file-control" onClick={() => { setFasta(demoFasta); setIsExampleFasta(true); resetUploadChecks(); }}>Load example</button>
+                  <button type="button" className="file-control choose-file" onClick={() => fileInputRef.current?.click()}><Upload size={12} /> Choose FASTA file</button>
+                  <input ref={fileInputRef} className="native-file-input" type="file" accept=".fasta,.fa,.fna,text/plain" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 5_000_000) { setError("The selected file is larger than the 5 MB limit."); return; } const contents = await file.text(); setFasta(contents); setIsExampleFasta(false); resetUploadChecks(); event.target.value = ""; }} />
+                </div>
               </div>
-              <textarea id="fasta" value={fasta} onChange={(event) => { setFasta(event.target.value); setInspection(null); setLocusExtraction(null); setIsolateEmbedding(null); }} spellCheck={false} />
+              <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); setIsExampleFasta(false); resetUploadChecks(); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
                   <strong>Real pipeline: {capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked locally"}</strong>
-                  <span>{capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
+                  <span>{isExampleFasta ? "The included example uses the instant demonstration path" : capabilities.novel_isolate_pipeline_ready ? "Sequence-processing tools available" : `Missing: ${capabilities.blockers.join(", ")}`}</span>
                 </div>
               )}
               <button className="inspect-button" onClick={async () => {
                 setError("");
+                const validationError = validateFastaInput(fasta);
+                if (validationError) { setError(validationError); return; }
                 try { setInspection(await inspectAssembly(fasta)); }
                 catch (err) { setError(err instanceof Error ? err.message : "Inspection failed"); }
               }}>Check assembly</button>
@@ -353,7 +382,7 @@ export default function App() {
             </div>
           ) : (
             <div className="research-picker">
-              <label htmlFor="research-host">Held-out PhageHostLearn isolate</label>
+              <label htmlFor="research-host">Known isolate excluded from model training</label>
               <select id="research-host" value={researchHost} onChange={(event) => setResearchHost(event.target.value)}>
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
               </select>

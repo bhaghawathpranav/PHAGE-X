@@ -5,7 +5,18 @@ const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http:/
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || "The analysis could not be completed.");
+    const detail = body.detail;
+    if (typeof detail === "string") throw new Error(detail);
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => typeof item?.msg === "string" ? item.msg.replace(/^Value error,\s*/i, "") : "")
+        .filter(Boolean);
+      throw new Error(messages.join(" ") || "Please check the submitted input.");
+    }
+    if (detail && typeof detail === "object") {
+      throw new Error(typeof detail.message === "string" ? detail.message : "Please check the submitted input.");
+    }
+    throw new Error("The analysis could not be completed.");
   }
   return response.json();
 }
