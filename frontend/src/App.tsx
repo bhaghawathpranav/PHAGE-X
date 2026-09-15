@@ -434,6 +434,11 @@ export default function App() {
     setError("");
   }
 
+  function changeMode(nextMode: "demo" | "upload" | "research") {
+    setMode(nextMode);
+    setError("");
+  }
+
   function validateFastaInput(value: string): string | null {
     const trimmed = value.trim();
     if (!trimmed) return "Choose a FASTA file or load the example first.";
@@ -558,9 +563,9 @@ export default function App() {
         <section className="input-panel panel" data-stage="analyse">
           <div className="panel-top"><span>01</span><div><h2>Choose your input</h2></div></div>
           <div className="tabs">
-            <button className={mode === "demo" ? "active" : ""} onClick={() => setMode("demo")}>XGBoost sample</button>
-            <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><Upload size={15} />Use my FASTA</button>
-            <button className={mode === "research" ? "active" : ""} onClick={() => setMode("research")}><Network size={15} />Model benchmark</button>
+            <button className={mode === "demo" ? "active" : ""} onClick={() => changeMode("demo")}>XGBoost sample</button>
+            <button className={mode === "upload" ? "active" : ""} onClick={() => changeMode("upload")}><Upload size={15} />Use my FASTA</button>
+            <button className={mode === "research" ? "active" : ""} onClick={() => changeMode("research")}><Network size={15} />Model benchmark</button>
           </div>
           <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance, not to analyze your own sequence."}</p>
 
