@@ -17,15 +17,14 @@ def test_health():
     assert response.headers["x-request-id"]
 
 
-def test_research_ranking_can_be_downloaded_as_json():
+def test_research_ranking_can_be_downloaded_as_pdf():
     host_id = client.get("/api/research-isolates").json()[0]
     response = client.get(f"/api/research-rank/{host_id}/export")
     assert response.status_code == 200
-    assert response.headers["content-type"].startswith("application/json")
-    assert response.headers["content-disposition"].endswith("-phage-ranking.json\"")
-    result = response.json()
-    assert result["host_id"] == host_id
-    assert len(result["candidates"]) == 20
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].endswith("-phage-ranking.pdf\"")
+    assert response.content.startswith(b"%PDF-")
+    assert len(response.content) > 5_000
 
 
 def test_readiness_checks_catalog():
