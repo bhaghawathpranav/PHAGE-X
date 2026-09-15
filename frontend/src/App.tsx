@@ -91,7 +91,7 @@ function Results({ result }: { result: Analysis }) {
     <main className="results page-shell">
       <div className="results-head">
         <div>
-          <span className="eyebrow"><Sparkles size={14} /> analysis complete</span>
+          <span className="eyebrow"><Sparkles size={14} /> analysis complete · research use only</span>
           <h1>Candidate landscape for <em>{result.isolate.name}</em></h1>
           <p>{result.isolate.organism} · {result.isolate.sequence_type} · {result.isolate.k_locus}</p>
         </div>
@@ -162,8 +162,8 @@ function ResearchResults({ result }: { result: ResearchRank }) {
       </div>
       <section className="panel blocked-panel">
         <AlertTriangle size={24} />
-        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2>
-          <p>Real cocktails stay blocked until genomic metadata and laboratory results are reviewed.</p>
+        <div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Catalog evidence incomplete</h2>
+          <p>Combination output is unavailable until the catalog metadata is reviewed.</p>
         </div>
       </section>
       <section className="panel ranking-panel">
@@ -184,7 +184,7 @@ function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
       <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div></div>
-      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Safety evidence required</h2><p>Real cocktails require reviewed genomic metadata and laboratory confirmation.</p></div></section>
+      <section className="panel blocked-panel"><AlertTriangle size={24} /><div><span className="step-label">COCKTAIL {result.cocktail_status}</span><h2>Catalog evidence incomplete</h2><p>Combination output is unavailable until the catalog metadata is reviewed.</p></div></section>
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
@@ -283,7 +283,7 @@ export default function App() {
       <Header />
       <main className="page-shell hero-layout">
         <section className="hero-copy">
-          <span className="eyebrow">OFFLINE RESEARCH PROTOTYPE</span>
+          <span className="eyebrow">AI-GUIDED PHAGE DISCOVERY</span>
           <h1>From bacterial isolate<br />to <em>phage shortlist.</em></h1>
           <p className="lead">Rank phages. Build complementary cocktails. Validate in the lab.</p>
           <div className="flow-strip">
@@ -292,7 +292,6 @@ export default function App() {
             <div><Layers3 /><span>Ranking</span></div><ArrowRight />
             <div><FlaskConical /><span>Validate</span></div>
           </div>
-          <div className="guardrail"><ShieldCheck size={18} /><div><strong>Lab validation required</strong></div></div>
         </section>
 
         <section className="input-panel panel">
@@ -374,7 +373,7 @@ export default function App() {
           <p className="privacy"><ShieldCheck size={13} /> Runs locally.</p>
         </section>
       </main>
-      <footer><span>PHAGE-X</span><span>Research output only · laboratory validation required</span></footer>
+      <footer><span>PHAGE-X</span></footer>
     </div>
   );
 }
