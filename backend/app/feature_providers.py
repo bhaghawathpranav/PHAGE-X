@@ -413,11 +413,16 @@ class ESM2Embedder:
         cleaned = [sequence.strip().upper() for sequence in proteins]
         if any(len(sequence) > 1022 for sequence in cleaned):
             raise ValueError("ESM-2 provider limits individual proteins to 1,022 residues")
-        data = [(f"protein-{index}", sequence) for index, sequence in enumerate(cleaned)]
-        _, _, tokens = converter(data)
-        with torch.no_grad():
-            output = self._model(tokens, repr_layers=[33], return_contacts=False)["representations"][33]
-        vectors = [output[index, 1 : len(sequence) + 1].mean(0).cpu().numpy() for index, sequence in enumerate(cleaned)]
+        # A complete K locus contains many proteins of very different lengths.
+        # Padding all of them into one transformer batch can consume several GB
+        # and terminate the API process on ordinary laptops.  Process one protein
+        # at a time and average the same per-protein representations instead.
+        vectors = []
+        with torch.inference_mode():
+            for index, sequence in enumerate(cleaned):
+                _, _, tokens = converter([(f"protein-{index}", sequence)])
+                output = self._model(tokens, repr_layers=[33], return_contacts=False)["representations"][33]
+                vectors.append(output[0, 1 : len(sequence) + 1].mean(0).cpu().numpy())
         combined = np.mean(vectors, axis=0).astype(np.float32)
         self.cache.put(key, combined, {"model": ESM2_MODEL, "protein_count": len(cleaned), "dimensions": 1280})
         return combined

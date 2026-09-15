@@ -244,7 +244,7 @@ export default function App() {
   }
 
   async function loadFastaFile(file: File) {
-    if (file.size > 5_000_000) { setError("The selected file is larger than the 5 MB limit."); return; }
+    if (file.size > 15_000_000) { setError("The selected file is larger than the 15 MB limit."); return; }
     const contents = await file.text();
     setFasta(contents);
     resetUploadChecks();
@@ -396,7 +396,7 @@ export default function App() {
                 </div>
               </div>
               <span className="drop-hint">or drop a FASTA file anywhere in this area</span>
-              <p className="fasta-format"><strong>Expected format</strong><code>&gt;isolate-name<br />ACGTACGTACGT...</code><span>Whole-genome assemblies may contain multiple FASTA records. Maximum uncompressed file size: 5 MB.</span></p>
+              <p className="fasta-format"><strong>Expected format</strong><code>&gt;isolate-name<br />ACGTACGTACGT...</code><span>Whole-genome assemblies may contain multiple FASTA records. Maximum uncompressed file size: 15 MB.</span></p>
               <textarea id="fasta" placeholder={">isolate-name\nACGTACGTACGT..."} value={fasta} onChange={(event) => { setFasta(event.target.value); resetUploadChecks(); }} spellCheck={false} />
               {capabilities && (
                 <div className={`pipeline-state ${capabilities.novel_isolate_pipeline_ready ? "ready" : "blocked"}`}>
