@@ -28,6 +28,30 @@ def test_research_ranking_can_be_downloaded_as_pdf():
     assert len(response.content) > 5_000
 
 
+def test_uploaded_isolate_ranking_can_be_downloaded_as_pdf():
+    ranked = client.post("/api/research-rank", json={"host_id": client.get("/api/research-isolates").json()[0], "limit": 5}).json()
+    response = client.post("/api/novel-rank/export", json={
+        "assembly_sha256": "a" * 64,
+        "locus": "KL74",
+        "species_status": "confirmed-reference-ani",
+        "species_ani_percent": 99.6154,
+        "model_version": ranked["model_version"],
+        "feature_source": "local-esm2-k-locus-proteins",
+        "feature_sha256": "b" * 64,
+        "distribution_status": "inside-reference-envelope",
+        "nearest_reference_cosine": 0.98,
+        "candidates": ranked["candidates"],
+        "cocktail_status": ranked["cocktail_status"],
+        "cocktail_blockers": ranked["cocktail_blockers"],
+        "disclaimer": ranked["disclaimer"],
+    })
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"] == 'attachment; filename="kl74-phage-ranking.pdf"'
+    assert response.content.startswith(b"%PDF-")
+    assert len(response.content) > 3_500
+
+
 def test_readiness_checks_catalog():
     result = client.get("/api/ready").json()
     assert result == {"status": "ready", "isolates": 2, "phages": 6}

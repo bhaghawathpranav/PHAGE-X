@@ -6,6 +6,35 @@ export function researchRankExportUrl(hostId: string): string {
   return `${API}/api/research-rank/${encodeURIComponent(hostId)}/export`;
 }
 
+export async function downloadNovelRankPdf(result: NovelIsolateRank): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API}/api/novel-rank/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result),
+    });
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error("The PHAGE-X backend is offline. Start the local API, then retry.");
+    throw error;
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(typeof body.detail === "string" ? body.detail : "The PDF report could not be generated.");
+  }
+  const blob = await response.blob();
+  if (blob.type !== "application/pdf") throw new Error("The server did not return a PDF report.");
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const safeLocus = result.locus.replace(/[^a-z0-9-]+/gi, "-").toLowerCase();
+  anchor.href = objectUrl;
+  anchor.download = `${safeLocus || "uploaded-isolate"}-phage-ranking.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+}
+
 export async function getVerifiedSampleFasta(sampleId = "atcc-baa-2146"): Promise<string> {
   try {
     const response = await fetch(`${API}/api/verified-samples/${encodeURIComponent(sampleId)}/fasta`);

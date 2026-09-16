@@ -24,7 +24,7 @@ from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
 from .security import ProductionSecurityMiddleware
 from .phage_catalog import validate_phage_catalog
-from .pdf_report import build_research_rank_pdf
+from .pdf_report import build_novel_rank_pdf, build_research_rank_pdf
 from .phage_screening import evidence_status, load_reviewed_metadata, registry_status
 from .research_model import get_research_model
 from .real_cocktail import optimize_reviewed_cocktail
@@ -216,6 +216,16 @@ def export_research_rank(host_id: str):
     safe_name = re.sub(r"[^a-zA-Z0-9-]+", "-", host_id).strip("-").lower() or "phage-x"
     return Response(
         content=build_research_rank_pdf(result, model.status()),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}-phage-ranking.pdf"'},
+    )
+
+
+@app.post("/api/novel-rank/export")
+def export_novel_rank(result: NovelIsolateRankResponse):
+    safe_name = re.sub(r"[^a-zA-Z0-9-]+", "-", result.locus).strip("-").lower() or "uploaded-isolate"
+    return Response(
+        content=build_novel_rank_pdf(result, get_research_model().status()),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{safe_name}-phage-ranking.pdf"'},
     )
