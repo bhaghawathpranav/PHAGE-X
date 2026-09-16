@@ -660,7 +660,7 @@ export default function App() {
             <button className={mode === "upload" ? "active" : ""} onClick={() => changeMode("upload")}><Upload size={15} />Use my FASTA</button>
             <button className={mode === "research" ? "active" : ""} onClick={() => changeMode("research")}><Network size={15} />Model validation</button>
           </div>
-          <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Validate the trained model on isolates it never saw during training. This checks whether known interacting phages are ranked near the top; it does not analyze a new FASTA file."}</p>
+          <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload any complete K. pneumoniae genome assembly in FASTA format. It does not need to be pre-registered or included with PHAGE-X." : "Validate the trained model on isolates it never saw during training. This checks whether known interacting phages are ranked near the top; it does not analyze a new FASTA file."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
@@ -685,7 +685,7 @@ export default function App() {
               <div className="organism-scope">
                 <span>Supported organism</span>
                 <strong><em>K</em>lebsiella pneumoniae species complex</strong>
-                <small>Other organisms require their own validated host–phage dataset, phage catalog, receptor features, and species reference.</small>
+                <small>New isolates are accepted after genome QC and species confirmation. Other organisms require their own validated host–phage dataset, phage catalog, receptor features, and species reference.</small>
               </div>
               <div className="upload-label-row">
                 <label htmlFor="fasta">FASTA sequence</label>

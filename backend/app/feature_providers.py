@@ -437,11 +437,25 @@ class ESM2Embedder:
         cached = self.cache.get(key)
         if cached is not None:
             return cached
+        # The 650M model can let Accelerate/BLAS create enough worker threads to
+        # exhaust memory while processing a new locus on ordinary laptops. Set
+        # conservative defaults before fair-esm imports PyTorch. Operators may
+        # raise the intra-op value deliberately after validating their host.
+        torch_threads = max(1, min(int(os.getenv("PHAGEX_TORCH_THREADS", "1")), 8))
+        os.environ.setdefault("OMP_NUM_THREADS", str(torch_threads))
+        os.environ.setdefault("OPENBLAS_NUM_THREADS", str(torch_threads))
+        os.environ.setdefault("VECLIB_MAXIMUM_THREADS", str(torch_threads))
         try:
-            import esm
             import torch
+            import esm
         except ImportError as error:
             raise RuntimeError("Local PyTorch and fair-esm are required for uncached ESM-2 inference") from error
+        torch.set_num_threads(torch_threads)
+        try:
+            torch.set_num_interop_threads(1)
+        except RuntimeError:
+            # PyTorch permits this setting only before inter-op work starts.
+            pass
         if self._model is None:
             checkpoint = esm2_checkpoint_report()
             if not checkpoint["ready"]:
