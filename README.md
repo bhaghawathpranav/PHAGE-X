@@ -1,95 +1,176 @@
 # PHAGE-X
 
-**AI-guided, explainable phage candidate prioritization for multidrug-resistant _Klebsiella pneumoniae_.**
+PHAGE-X is a research prototype for prioritizing bacteriophages against multidrug-resistant *Klebsiella pneumoniae*. It accepts a known isolate or a bacterial genome assembly, constructs a host representation, ranks a fixed phage catalog with a calibrated XGBoost model, and produces an evidence-backed shortlist for laboratory follow-up.
 
-PHAGE-X is a software-only 24-hour hackathon MVP. It turns a preloaded isolate or uploaded FASTA into an explainable phage ranking and a complementary 2–3 member cocktail candidate. The demo runs locally without external APIs.
+The project is designed around a practical question: can protein-language-model representations reduce the number of phages that must be screened for a previously unseen bacterial isolate?
 
-> **For laboratory validation only.** This research prototype does not diagnose, prescribe treatment, recommend dosing, establish safety, or predict clinical success.
+PHAGE-X does not determine susceptibility, prescribe a cocktail, or support treatment decisions. Its output is a ranking for research use. Plaque assays, genomic review, and independent biological interpretation remain necessary.
 
-## What works
+## Project status
 
-- Two offline _K. pneumoniae_ demo isolates, including an ST258 / KL107 multidrug-resistant case
-- FASTA validation and deterministic placeholder embeddings
-- Frozen, explainable logistic compatibility baseline
-- Ranked strictly lytic demo phages with feature contributions
-- Greedy cocktail construction using compatibility + diversity − redundancy
-- Responsive React UI, FastAPI schema/docs, and API tests
-- Separate real-model benchmark mode restricted to held-out PhageHostLearn isolates
-- Kaptive-backed KL reference-protein extraction and a cached ESM-2 feature interface
-- Fail-closed isolate-derived K-locus protein extraction with ephemeral sequence handling
-- Offline fastANI species confirmation against a checksum-pinned NCBI RefSeq genome
-- Verified local ESM-2 650M inference with a sequence-free persistent vector cache
-- Novel-isolate ranking against all 105 released PhageHostLearn RBP profiles
-- One-click checksum-verified ATCC BAA-2146 FASTA example for the complete uploaded-genome pipeline
-- In-app model-evidence summary focused on top-5 recall, AUROC, PR-AUC, class imbalance, and appropriate interpretation
-- Bounded background feature jobs and a fail-closed reviewed-evidence cocktail optimizer
-- Offline source genomes and 274 author-identified RBP sequences for all 105 catalog phages
-- Per-phage sequence QC plus a fail-closed reviewed-evidence registry; sequence quality is never treated as biological safety clearance
+This repository contains a working end-to-end prototype and a reproducible model benchmark. It is not a clinically validated system and the model artifact is deliberately marked as not approved for release.
 
-## Run locally
+Implemented:
 
-Prerequisites: Python 3.9+ and Node 18+.
+- whole-genome FASTA parsing and assembly quality checks
+- checksum-pinned fastANI species confirmation
+- Kaptive capsule-locus typing and protein extraction
+- local ESM-2 `esm2_t33_650M_UR50D` inference with a sequence-free cache
+- calibrated XGBoost ranking against 105 phages
+- host-disjoint model evaluation on held-out bacterial isolates
+- explainable candidate output and downloadable PDF reports
+- fail-closed cocktail and genomic-evidence gates
+- FastAPI service, React interface, CI, containers, audit metadata, and tests
+
+Still required before scientific or operational release:
+
+- evaluation on an independent external host-phage dataset
+- stronger negative-label curation and sensitivity analysis
+- comparison with additional biological and statistical baselines
+- subgroup analysis across capsule loci, sequence types, and source studies
+- independent review of genomic safety evidence
+- prospective wet-lab validation
+- identity, tenant isolation, managed secrets, monitoring, and an external security review
+
+## Research contribution
+
+The current work is a systems and evaluation contribution, not a claim of a new state-of-the-art biological model. It combines a leakage-aware compatibility benchmark with a complete path from an uploaded assembly to a ranked catalog.
+
+The central research question is:
+
+> For bacterial hosts excluded from training, how reliably can compact pairwise features derived from host K-locus and phage receptor-binding-protein embeddings retrieve at least one observed interacting phage within a small laboratory shortlist?
+
+The primary product-aligned measure is top-k host recall. AUROC, average precision, calibration, balanced accuracy, and thresholded error counts are reported as supporting measures. Raw accuracy is not used as the headline result because positive interactions represent only 3.33% of evaluated pairs.
+
+The proposed publication study, baselines, ablations, statistical analysis, and external-validation gates are defined in [docs/RESEARCH_PROTOCOL.md](docs/RESEARCH_PROTOCOL.md).
+
+## System workflow
+
+```text
+Genome assembly
+    |
+    v
+Assembly QC -> species confirmation -> K-locus typing
+    |
+    v
+K-locus proteins -> ESM-2 host embedding
+    |
+    +-------------------------------+
+                                    |
+Phage RBP embeddings ---------------+-> pair features -> calibrated XGBoost
+                                                            |
+                                                            v
+                                             ranked research shortlist
+                                                            |
+                                                            v
+                                           evidence and laboratory gates
+```
+
+An uploaded assembly is processed locally and is not stored. The persistent feature cache contains vectors and provenance digests, not raw nucleotide or protein sequences.
+
+### Input validation
+
+The uploaded-genome route accepts multi-record FASTA assemblies up to 15 MB. A sequence must pass basic assembly checks and match the pinned *K. pneumoniae* reference at a minimum of 95% ANI and 65% aligned fragments. Inputs outside this range are rejected before feature extraction.
+
+The repository includes a checksum-verified *K. pneumoniae* ATCC BAA-2146 assembly for demonstration. In the validated local environment it produces 99.6154% ANI, 91.1% alignment coverage, and a Typeable KL74 call.
+
+### Host and phage representations
+
+Host features are derived from proteins in the Kaptive-called capsule locus. Phage features use the released ESM-2 receptor-binding-protein embeddings from PhageHostLearn. Multiple receptor-binding proteins for one phage are mean pooled.
+
+Each host-phage pair is represented by 11 compact features:
+
+- cosine similarity and Euclidean distance
+- mean, standard deviation, and maximum absolute difference
+- mean, standard deviation, and maximum elementwise product
+- host and phage embedding norms
+- receptor-binding-protein count
+
+### Ranking model
+
+The classifier is XGBoost with class weighting for the imbalanced interaction labels. Raw model scores are calibrated by logistic regression on validation hosts. The binary decision threshold is selected on the validation split only. Runtime artifacts and source data are verified against SHA-256 manifests before use.
+
+## Data and evaluation
+
+The training workflow uses the public [PhageHostLearn dataset](https://doi.org/10.5281/zenodo.11061100), distributed under CC BY 4.0.
+
+Aligned data used by the current artifact:
+
+- 200 bacterial hosts
+- 105 phages
+- 10,006 labeled host-phage pairs
+- 333 observed positive pairs
+- 3.33% positive prevalence
+- 1,280-dimensional host and phage embeddings
+
+Hosts, rather than individual pairs, are split into training, validation, and test groups. The fixed seed-41 split contains 139 training hosts, 31 validation hosts, and 30 test hosts. No host appears in more than one split.
+
+### Current held-out results
+
+- ROC-AUC: 0.885
+- average precision, or PR-AUC: 0.314
+- balanced accuracy: 0.716
+- positive recall: 0.458
+- precision: 0.367
+- F1: 0.407
+- Matthews correlation coefficient: 0.388
+- Brier score: 0.026
+- top-3 host recall: 0.842
+- top-5 host recall: 0.895
+- confusion matrix: 1,398 TN, 38 FP, 26 FN, 22 TP
+
+Top-5 host recall means that, among eligible held-out hosts with at least one observed positive interaction, 89.5% had an observed interacting phage within the model's first five candidates. It does not mean that every top-five phage will infect a new isolate.
+
+These results come from an internal host-disjoint split of one source dataset. They are suitable for evaluating the prototype and motivating a larger study, but not for a biological or clinical performance claim. See [docs/MODEL_CARD.md](docs/MODEL_CARD.md) and the machine-readable [backend/artifacts/model_card.json](backend/artifacts/model_card.json).
+
+## Run the application
+
+### Core application and model-validation mode
+
+Requirements:
+
+- Python 3.9 or later
+- Node.js 18 or later
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements-test.txt
-cd frontend && npm install && cd ..
+cd frontend
+npm ci
+cd ..
 ./scripts/demo.sh
 ```
 
-Open [http://localhost:5173](http://localhost:5173). API documentation is at [http://localhost:8000/docs](http://localhost:8000/docs).
+Open `http://127.0.0.1:5173`. The OpenAPI interface is available at `http://127.0.0.1:8000/docs`.
 
-## Verify
+### Complete uploaded-genome pipeline
 
-```bash
-cd backend && ../.venv/bin/pytest -q
-cd frontend && npm run build
-```
-
-## Demo walkthrough
-
-1. Keep featured `KPN-HX01` selected and choose three phages.
-2. Run candidate discovery and explain the top candidate using its contributions.
-3. Show how the cocktail rewards diverse families/receptors and penalizes overlapping host-range tags.
-4. Expand a ranked candidate and point out the limitations and lab-validation gate.
-5. Return to the input and switch to FASTA to show the future-facing interface.
-6. Choose **Load verified example** to run the public ATCC BAA-2146 assembly through QC, species confirmation, KL74 extraction, ESM-2 features, and catalog ranking.
-
-The dataset is deliberately synthetic-compatible: it supports a reproducible product demo but must not be represented as experimentally validated observations. See [architecture notes](docs/ARCHITECTURE.md) for model details and the upgrade path.
-
-For the problem framing, competitive positioning, validation strategy, and ready-to-deliver scripts, see the [pitch report](docs/PITCH_REPORT.md).
-
-The **Real benchmark** tab is different from the synthetic demo. It loads the hash-verified trained artifact, accepts only host IDs from the model's fixed held-out test split, and ranks 105 real dataset phage IDs using released ESM-2 embeddings. Each real phage has traceable genome QC through `/api/phage-evidence/{phage_id}`. Cocktail construction remains blocked because genomic safety and normalized diversity metadata are not yet independently reviewed.
-
-The FASTA tab also exposes **Inspect real-pipeline readiness**. It performs multi-contig assembly QC and reports missing local Kaptive/minimap2/fastANI/ESM-2 capabilities without storing the sequence or falling back silently. With the complete local toolchain, an uploaded assembly is species-confirmed, K-locus typed, embedded, distribution-checked, and ranked against 105 released phage RBP profiles. Real cocktail construction remains blocked until independent phage safety and diversity metadata are available. See `docs/NOVEL_ISOLATE_PIPELINE.md`.
-
-The legacy synthetic single-record FASTA route is intentionally capped at 5 MB; the real multi-contig assembly pipeline accepts up to 15 MB. Reviewed phage evidence is validated against a strict versioned schema. Use `scripts/migrate_reviewed_evidence.py SOURCE OUTPUT` to create a validated migrated copy without overwriting the source registry.
-
-To enable offline ESM-2 extraction, install `backend/requirements-embedding.txt`, run `scripts/fetch_esm2_checkpoint.py` once, and use `scripts/precompute_esm2.py` to warm canonical locus vectors. The 2.60 GB checkpoint is kept in the local Torch cache and verified against `backend/data/esm2/manifest.json`; it is not stored in Git.
-
-## Production path
-
-The current repository includes CI, environment validation, health/readiness checks, security headers, production API-key enforcement, request throttling, metadata-only audit records, verified state backups, and a deployment runbook. Local development remains key-free. Production requires `PHAGEX_API_KEY` with at least 24 characters and accepts it in the `X-API-Key` header. It is not yet a scientifically validated production model. Follow the gated [production roadmap](docs/PRODUCTION_ROADMAP.md), [risk register](docs/RISK_REGISTER.md), and [deployment runbook](docs/DEPLOYMENT.md).
+The full FASTA route also needs the local sequence and embedding toolchain:
 
 ```bash
-docker compose up --build
-# app: http://localhost:8080
-# readiness: http://localhost:8080/api/ready
+.venv/bin/pip install -r backend/requirements-embedding.txt
+.venv/bin/python scripts/fetch_esm2_checkpoint.py
 ```
 
-## Reproduce the research-model benchmark
+Install `minimap2` and `fastANI` through the operating system. Kaptive is included in `backend/requirements-sequence.txt`. Runtime requests never download model weights or call an external API. Read [docs/NOVEL_ISOLATE_PIPELINE.md](docs/NOVEL_ISOLATE_PIPELINE.md) for the validated tool versions and failure rules.
 
-The data fetch is checksum-pinned to the public PhageHostLearn Zenodo release.
+### Interface modes
 
-Run the complete download, training, calibration, and evaluation workflow:
+`XGBoost sample` runs the trained model on a prepared held-out isolate with released embeddings.
+
+`Use my FASTA` runs assembly QC, species confirmation, capsule typing, ESM-2 feature generation, distribution checking, and catalog ranking. Use the verified KL74 example to exercise the complete path.
+
+`Model validation` evaluates the trained artifact on isolates excluded from training. It exists to inspect ranking behavior and evaluation evidence, not to analyze a new genome.
+
+## Reproduce model training
+
+The training script verifies the published source checksums before constructing the pair dataset.
 
 ```bash
 ./scripts/train_and_evaluate.sh
 ```
 
-The untouched host-disjoint test set reports ROC-AUC, average precision (PR-AUC), Brier score, accuracy, balanced accuracy, precision, recall, specificity, F1, Matthews correlation, the complete confusion matrix, and top-3/top-5 per-host recall. The classification threshold is chosen from validation data only. Host-bootstrap confidence intervals and repeated host-group holdouts are written to `backend/artifacts/model_card.json`.
-
-The equivalent manual commands are:
+Equivalent manual steps:
 
 ```bash
 .venv/bin/pip install -r backend/requirements-ml.txt
@@ -100,4 +181,47 @@ PYTHONPATH=backend .venv/bin/python -m ml.train \
   --output-dir backend/artifacts
 ```
 
-See `docs/MODEL_CARD.md`. The trained joblib artifact is intentionally ignored; the JSON model card is retained for review.
+The run writes the trained bundle, runtime catalog, model card, source lineage, calibration report, repeated host-group holdouts, bootstrap intervals, permutation importance, and release manifest.
+
+## Verification
+
+```bash
+cd backend
+../.venv/bin/pytest -q
+
+cd ../frontend
+npm run build
+```
+
+GitHub Actions repeats the backend tests, frontend production build, and container build for every push and pull request.
+
+## Repository structure
+
+```text
+backend/app/          API, sequence pipeline, inference, security, and reporting
+backend/ml/           dataset construction, training, calibration, and evaluation
+backend/artifacts/    versioned model card, model, catalog, and release manifest
+backend/tests/        API, ML, security, data, and pipeline tests
+frontend/src/         React application
+data/                 checksum-pinned public-data manifests
+docs/                 architecture, model, research, risk, and deployment records
+scripts/              reproducible setup, training, migration, and backup commands
+```
+
+## Production engineering boundary
+
+The repository includes production-shaped controls: non-root containers, strict configuration validation, exact CORS origins, API-key enforcement in production, request throttling, request IDs, security headers, health and readiness checks, bounded background work, artifact integrity checks, metadata-only audit logging, and verified SQLite backups.
+
+That does not make the system production-ready. The current rate limiter and job queue are process-local. SQLite is appropriate for this single-node prototype but not for horizontally scaled request and job coordination. A public deployment also needs managed identity, role-based access control, tenant separation, encrypted durable storage, centralized observability, signed releases, restore drills, and an independent security assessment.
+
+The required engineering and evidence gates are tracked in [docs/PRODUCTION_ROADMAP.md](docs/PRODUCTION_ROADMAP.md), [docs/RISK_REGISTER.md](docs/RISK_REGISTER.md), [SECURITY.md](SECURITY.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Contributing
+
+Changes should preserve host-disjoint evaluation, fail-closed biological evidence gates, sequence non-persistence, and reproducible artifact lineage. Read [CONTRIBUTING.md](CONTRIBUTING.md) before modifying the model, data pipeline, API schemas, or safety behavior.
+
+## Citation and licensing
+
+The source dataset must be cited as PhageHostLearn, Zenodo DOI `10.5281/zenodo.11061100`, under its CC BY 4.0 terms.
+
+The repository does not currently declare a software license. Until the project owners add one, the source should not be assumed to grant redistribution or commercial-use rights.
