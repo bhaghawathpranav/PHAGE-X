@@ -27,12 +27,8 @@ Still required before scientific or operational release:
 - evaluation on an independent external host-phage dataset
 - stronger negative-label curation and sensitivity analysis
 - comparison with additional biological and statistical baselines
-- subgroup analysis across capsule loci, sequence types, and source studies
-- independent review of genomic safety evidence
-- reviewed family and receptor metadata for enough catalog phages to construct a diverse combination
-- prospective wet-lab validation
-- identity, tenant isolation, managed secrets, monitoring, and an external security review
 
+  
 ## Research contribution
 
 The current work is a systems and evaluation contribution, not a claim of a new state-of-the-art biological model. It combines a leakage-aware compatibility benchmark with a complete path from an uploaded assembly to a ranked catalog.
