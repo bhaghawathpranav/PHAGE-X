@@ -284,3 +284,16 @@ def test_novel_rank_response_exposes_real_cocktail_contract(monkeypatch):
     assert result["cocktail_family_diversity"] == 1.0
     assert result["cocktail_receptor_diversity"] == pytest.approx(2 / 3)
     assert result["cocktail_redundancy"] == 0.0
+
+
+def test_novel_rank_qc_error_explains_failed_measurements():
+    response = client.post(
+        "/api/rank-novel-isolate",
+        json={"fasta": ">incomplete-isolate\n" + "ACGT" * 25},
+    )
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert "Assembly QC stopped real-catalog ranking" in detail
+    assert "outside the broad expected K. pneumoniae genome range" in detail
+    assert "N50 is below 20 kbp" in detail
+    assert "load the verified example" in detail

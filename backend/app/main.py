@@ -53,6 +53,18 @@ settings = get_settings()
 VERIFIED_SAMPLE_FASTA = Path(__file__).parent.parent / "data" / "samples" / "GCF_000364385.3_ASM36438v3_genomic.fna"
 novel_rank_jobs = BoundedJobManager(max_workers=1, max_queued=2, retention_minutes=60)
 logging.basicConfig(level=settings.log_level)
+
+
+def require_assembly_qc_pass(qc, next_stage: str) -> None:
+    if qc.status == "pass":
+        return
+    reasons = "; ".join(qc.warnings) or "assembly quality requires review"
+    raise ValueError(
+        f"Assembly QC stopped {next_stage}: {reasons}. "
+        "Use a complete K. pneumoniae whole-genome assembly or load the verified example."
+    )
+
+
 app = FastAPI(
     title="PHAGE-X API",
     version=settings.app_version,
@@ -290,8 +302,7 @@ def reference_locus_proteins(locus: str):
 def extract_isolate_locus(request: IsolateLocusRequest):
     try:
         _, qc = parse_assembly_fasta(request.fasta)
-        if qc.status != "pass":
-            raise ValueError("Assembly QC requires review before K-locus extraction")
+        require_assembly_qc_pass(qc, "K-locus extraction")
         species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
         proteins = KaptiveRunner().type_and_extract_assembly(request.fasta)
     except ValueError as error:
@@ -328,8 +339,7 @@ def extract_isolate_locus(request: IsolateLocusRequest):
 def embed_isolate_locus(request: IsolateLocusRequest):
     try:
         _, qc = parse_assembly_fasta(request.fasta)
-        if qc.status != "pass":
-            raise ValueError("Assembly QC requires review before feature extraction")
+        require_assembly_qc_pass(qc, "feature extraction")
         species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
         result = IsolateLocusFeaturePipeline(
             KaptiveRunner(), ESM2Embedder(EmbeddingCache(Path(settings.embedding_cache)))
@@ -361,8 +371,7 @@ def embed_isolate_locus(request: IsolateLocusRequest):
 def rank_novel_isolate(request: NovelIsolateRankRequest):
     try:
         _, qc = parse_assembly_fasta(request.fasta)
-        if qc.status != "pass":
-            raise ValueError("Assembly QC requires review before real-catalog ranking")
+        require_assembly_qc_pass(qc, "real-catalog ranking")
         species = FastANIRunner().confirm_klebsiella_pneumoniae(request.fasta)
         features = IsolateLocusFeaturePipeline(
             KaptiveRunner(), ESM2Embedder(EmbeddingCache(Path(settings.embedding_cache)))
