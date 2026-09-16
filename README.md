@@ -188,6 +188,14 @@ The run writes the trained bundle, runtime catalog, model card, source lineage, 
 
 ## Verification
 
+Run the standard backend suite and frontend production build with one command:
+
+```bash
+./scripts/verify.sh
+```
+
+The equivalent individual commands are:
+
 ```bash
 cd backend
 ../.venv/bin/pytest -q
@@ -201,8 +209,7 @@ GitHub Actions repeats the backend tests, frontend production build, and contain
 The heavier local acceptance test uses the bundled verified genome and the installed native/ESM-2 toolchain:
 
 ```bash
-PHAGEX_RUN_REAL_PIPELINE=1 PYTHONPATH=backend \
-  .venv/bin/pytest -q backend/tests/test_real_pipeline_acceptance.py
+PHAGEX_RUN_REAL_PIPELINE=1 ./scripts/verify.sh
 ```
 
 It verifies assembly parsing, fastANI species confirmation, Kaptive KL74 extraction, a finite 1,280-dimensional ESM-2 representation, calibrated ranking of all 105 phages, the reviewed-evidence gate, and PDF creation. With the repository's current evidence registry, the expected combination state is `blocked`; a selected 2–3 phage result would be dishonest until real reviewed metadata is added.

@@ -2,6 +2,10 @@ import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLo
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:8000");
 
+export function apiDocsUrl(): string {
+  return `${API}/docs`;
+}
+
 export function researchRankExportUrl(hostId: string): string {
   return `${API}/api/research-rank/${encodeURIComponent(hostId)}/export`;
 }

@@ -16,7 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { downloadNovelRankPdf, embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, getVerifiedSampleFasta, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
+import { apiDocsUrl, downloadNovelRankPdf, embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, getVerifiedSampleFasta, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
 type DnaPoint = { x: number; y: number; z: number };
@@ -720,7 +720,7 @@ export default function App() {
                 <div><span>02</span><strong>Species + capsule</strong><small>fastANI and Kaptive</small></div>
                 <div><span>03</span><strong>Protein features</strong><small>Local ESM-2 embeddings</small></div>
                 <div><span>04</span><strong>Phage ranking</strong><small>Calibrated XGBoost, 105 phages</small></div>
-                <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
+                <a href={apiDocsUrl()} target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
               </div>
               <button className="inspect-button" onClick={async () => {
                 setError("");

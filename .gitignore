@@ -8,3 +8,8 @@ frontend/dist/
 *.tsbuildinfo
 .env
 work/
+
+# Locally generated reports and handoff bundles. These files are preserved on
+# disk but are not source artifacts.
+/output/
+/PHAGE-X-*.zip
