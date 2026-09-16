@@ -12,4 +12,13 @@ work/
 # Locally generated reports and handoff bundles. These files are preserved on
 # disk but are not source artifacts.
 /output/
+/outputs/
 /PHAGE-X-*.zip
+
+# Local presentation renders and handoff material are not part of the product.
+/.codex-finalizer/
+/.pptx-build/
+/.pptx-render-*/
+/high-interaction-fasta-samples/
+/verified-fasta-samples/
+/verified-fasta-samples 2/

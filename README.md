@@ -165,12 +165,6 @@ Install `minimap2` and `fastANI` through the operating system. Kaptive is includ
 
 `Model validation` evaluates the trained artifact on isolates excluded from training. It exists to inspect ranking behavior and evaluation evidence, not to analyze a new genome.
 
-### Three-minute video demo
-
-The timestamped narration, exact webpage actions, recording checklist, and
-on-screen process flow are in
-[docs/VIDEO_DEMO_SCRIPT.md](docs/VIDEO_DEMO_SCRIPT.md).
-
 ## Reproduce model training
 
 The training script verifies the published source checksums before constructing the pair dataset.
