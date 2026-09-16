@@ -12,7 +12,7 @@ def test_real_genome_qc_is_traceable_but_not_safety_clearance():
 
 def test_empty_review_registry_fails_closed():
     result = evidence_status("A1a")
-    assert result["evidence_status"] == "not-reviewed"
+    assert result["evidence_status"] == "blocked"
     assert result["cocktail_eligible"] is False
     assert len(result["required_screens"]) == 6
     assert registry_status()["cocktail_eligible_records"] == 0
