@@ -5,7 +5,7 @@ import json
 import numpy as np
 
 import app.feature_providers as providers
-from app.feature_providers import EmbeddingCache, capability_report
+from app.feature_providers import EmbeddingCache, capability_report, esm2_representation_contract
 
 
 def test_embedding_cache_uses_sequence_digest_not_raw_sequence(tmp_path: Path):
@@ -16,6 +16,22 @@ def test_embedding_cache_uses_sequence_digest_not_raw_sequence(tmp_path: Path):
     observed = cache.get(key)
     assert np.array_equal(observed, vector)
     assert b"MKTAYIAK" not in cache.path.read_bytes()
+
+
+def test_embedding_cache_key_tracks_contract_and_is_protein_order_invariant():
+    assert EmbeddingCache.key(["AAAA", "CCCC"]) == EmbeddingCache.key(["CCCC", "AAAA"])
+    contract = esm2_representation_contract()
+    assert contract["dimensions"] == 1280
+    assert contract["layer"] == 33
+    assert "protein_mean" in str(contract["pooling"])
+
+
+def test_embedding_cache_rejects_malformed_vectors(tmp_path: Path):
+    cache = EmbeddingCache(tmp_path / "embeddings.sqlite3")
+    with np.testing.assert_raises_regex(ValueError, "shape"):
+        cache.put("bad", np.zeros(12, dtype=np.float32), {})
+    with np.testing.assert_raises_regex(ValueError, "non-finite"):
+        cache.put("bad", np.full(1280, np.nan, dtype=np.float32), {})
 
 
 def test_capability_report_is_fail_closed():

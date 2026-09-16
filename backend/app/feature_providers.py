@@ -22,12 +22,33 @@ from .species import fastani_available
 
 
 ESM2_MODEL = "esm2_t33_650M_UR50D"
+ESM2_LAYER = 33
+ESM2_DIMENSIONS = 1280
+ESM2_POOLING = "residue_mean_excluding_bos_eos_then_protein_mean"
 ESM2_MANIFEST = Path(__file__).parent.parent / "data" / "esm2" / "manifest.json"
 
 
 def esm2_checkpoint_directory() -> Path:
     configured = os.getenv("PHAGEX_ESM2_CHECKPOINT_DIR")
     return Path(configured) if configured else Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+
+
+def esm2_representation_contract() -> Dict[str, object]:
+    """Return the exact representation definition used by runtime and precomputation."""
+    fair_esm_version = "unknown"
+    if ESM2_MANIFEST.exists():
+        try:
+            manifest = json.loads(ESM2_MANIFEST.read_text(encoding="utf-8"))
+            fair_esm_version = str(manifest.get("fair_esm_version", "unknown"))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return {
+        "model": ESM2_MODEL,
+        "fair_esm_version": fair_esm_version,
+        "layer": ESM2_LAYER,
+        "dimensions": ESM2_DIMENSIONS,
+        "pooling": ESM2_POOLING,
+    }
 
 
 def esm2_checkpoint_report() -> Dict[str, object]:
@@ -132,7 +153,8 @@ def capability_report() -> Dict[str, object]:
         "tools": {name: bool(value) for name, value in tools.items()},
         "blockers": blockers,
         "esm2_model": ESM2_MODEL,
-        "embedding_dimensions": 1280,
+        "embedding_dimensions": ESM2_DIMENSIONS,
+        "representation_contract": esm2_representation_contract(),
         "esm2_checkpoint": checkpoint,
     }
 
@@ -351,12 +373,19 @@ def isolate_proteins_from_kaptive_record(record: Dict[str, object]) -> Dict[str,
 
 class EmbeddingCache:
     def __init__(self, path: Path):
-        self.path = path
+        self.path = Path(path)
 
     @staticmethod
     def key(proteins: Sequence[str], model_name: str = ESM2_MODEL) -> str:
-        normalized = "\n".join(sequence.strip().upper() for sequence in proteins)
-        return hashlib.sha256(f"{model_name}\n{normalized}".encode()).hexdigest()
+        contract = esm2_representation_contract()
+        contract["model"] = model_name
+        payload = {
+            "contract": contract,
+            "proteins": sorted(sequence.strip().upper() for sequence in proteins),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
 
     def get(self, key: str) -> np.ndarray | None:
         if not self.path.exists():
@@ -364,11 +393,22 @@ class EmbeddingCache:
         with sqlite3.connect(self.path) as connection:
             connection.execute("CREATE TABLE IF NOT EXISTS embeddings (key TEXT PRIMARY KEY, vector BLOB NOT NULL, metadata TEXT NOT NULL)")
             row = connection.execute("SELECT vector FROM embeddings WHERE key = ?", (key,)).fetchone()
-        return np.frombuffer(row[0], dtype=np.float32).copy() if row else None
+        if row is None:
+            return None
+        vector = np.frombuffer(row[0], dtype=np.float32).copy()
+        if vector.shape != (ESM2_DIMENSIONS,) or not np.isfinite(vector).all():
+            return None
+        return vector
 
     def put(self, key: str, vector: np.ndarray, metadata: Dict[str, object]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         value = np.asarray(vector, dtype=np.float32)
+        if value.shape != (ESM2_DIMENSIONS,):
+            raise ValueError(
+                f"Cannot cache embedding with shape {value.shape}; expected ({ESM2_DIMENSIONS},)"
+            )
+        if not np.isfinite(value).all():
+            raise ValueError("Cannot cache non-finite embedding values")
         with sqlite3.connect(self.path) as connection:
             connection.execute("CREATE TABLE IF NOT EXISTS embeddings (key TEXT PRIMARY KEY, vector BLOB NOT NULL, metadata TEXT NOT NULL)")
             connection.execute(
@@ -388,7 +428,12 @@ class ESM2Embedder:
     def embed(self, proteins: Sequence[str]) -> np.ndarray:
         if not proteins:
             raise ValueError("At least one protein sequence is required")
-        key = self.cache.key(proteins)
+        cleaned = [sequence.strip().upper() for sequence in proteins]
+        if any(not sequence for sequence in cleaned):
+            raise ValueError("Protein sequences must not be empty")
+        if any(len(sequence) > 1022 for sequence in cleaned):
+            raise ValueError("ESM-2 provider limits individual proteins to 1,022 residues")
+        key = self.cache.key(cleaned)
         cached = self.cache.get(key)
         if cached is not None:
             return cached
@@ -410,9 +455,6 @@ class ESM2Embedder:
                 self._model, self._alphabet = esm.pretrained.load_model_and_alphabet_local(model_path)
             self._model.eval()
         converter = self._alphabet.get_batch_converter()
-        cleaned = [sequence.strip().upper() for sequence in proteins]
-        if any(len(sequence) > 1022 for sequence in cleaned):
-            raise ValueError("ESM-2 provider limits individual proteins to 1,022 residues")
         # A complete K locus contains many proteins of very different lengths.
         # Padding all of them into one transformer batch can consume several GB
         # and terminate the API process on ordinary laptops.  Process one protein
@@ -421,10 +463,20 @@ class ESM2Embedder:
         with torch.inference_mode():
             for index, sequence in enumerate(cleaned):
                 _, _, tokens = converter([(f"protein-{index}", sequence)])
-                output = self._model(tokens, repr_layers=[33], return_contacts=False)["representations"][33]
+                output = self._model(tokens, repr_layers=[ESM2_LAYER], return_contacts=False)["representations"][ESM2_LAYER]
                 vectors.append(output[0, 1 : len(sequence) + 1].mean(0).cpu().numpy())
         combined = np.mean(vectors, axis=0).astype(np.float32)
-        self.cache.put(key, combined, {"model": ESM2_MODEL, "protein_count": len(cleaned), "dimensions": 1280})
+        if combined.shape != (ESM2_DIMENSIONS,):
+            raise ValueError(
+                f"ESM-2 provider returned {combined.shape}, expected ({ESM2_DIMENSIONS},)"
+            )
+        if not np.isfinite(combined).all():
+            raise ValueError("ESM-2 provider returned non-finite values")
+        self.cache.put(
+            key,
+            combined,
+            {**esm2_representation_contract(), "protein_count": len(cleaned)},
+        )
         return combined
 
 
@@ -442,8 +494,8 @@ class ReferenceLocusFeaturePipeline:
     def build(self, locus: str) -> LocusFeatureResult:
         proteins = self.extractor.extract_reference_proteins(locus)
         embedding = np.asarray(self.embedder.embed(proteins.sequences), dtype=np.float32)
-        if embedding.shape != (1280,):
-            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected (1280,)")
+        if embedding.shape != (ESM2_DIMENSIONS,):
+            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected ({ESM2_DIMENSIONS},)")
         if not np.isfinite(embedding).all():
             raise ValueError("ESM-2 provider returned non-finite values")
         return LocusFeatureResult(
@@ -465,8 +517,8 @@ class IsolateLocusFeaturePipeline:
     def build(self, fasta: str) -> LocusFeatureResult:
         proteins = self.extractor.type_and_extract_assembly(fasta)
         embedding = np.asarray(self.embedder.embed(proteins.sequences), dtype=np.float32)
-        if embedding.shape != (1280,):
-            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected (1280,)")
+        if embedding.shape != (ESM2_DIMENSIONS,):
+            raise ValueError(f"ESM-2 provider returned {embedding.shape}, expected ({ESM2_DIMENSIONS},)")
         if not np.isfinite(embedding).all():
             raise ValueError("ESM-2 provider returned non-finite values")
         return LocusFeatureResult(

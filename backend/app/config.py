@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Tuple
 
 
@@ -17,7 +18,7 @@ class Settings:
     log_level: str
     app_version: str
     feedback_db: str
-    embedding_cache: str
+    embedding_cache: Path
     api_key: str | None
     rate_limit_per_minute: int
     audit_db: str
@@ -41,13 +42,16 @@ def get_settings() -> Settings:
     api_key = os.getenv("PHAGEX_API_KEY")
     if environment == "production" and (not api_key or len(api_key) < 24):
         raise RuntimeError("PHAGEX_API_KEY must contain at least 24 characters in production")
+    backend_root = Path(__file__).resolve().parent.parent
+    configured_cache = Path(os.getenv("PHAGEX_EMBEDDING_CACHE", "work/esm2_embeddings.sqlite3"))
+    embedding_cache = configured_cache if configured_cache.is_absolute() else backend_root / configured_cache
     return Settings(
         environment=environment,
         allowed_origins=origins,
         log_level=os.getenv("PHAGEX_LOG_LEVEL", "INFO").upper(),
         app_version=os.getenv("PHAGEX_VERSION", "0.2.0"),
         feedback_db=os.getenv("PHAGEX_FEEDBACK_DB", "work/phagex_feedback.sqlite3"),
-        embedding_cache=os.getenv("PHAGEX_EMBEDDING_CACHE", "work/esm2_embeddings.sqlite3"),
+        embedding_cache=embedding_cache,
         api_key=api_key,
         rate_limit_per_minute=int(os.getenv("PHAGEX_RATE_LIMIT_PER_MINUTE", "60")),
         audit_db=os.getenv("PHAGEX_AUDIT_DB", "work/phagex_audit.sqlite3"),
