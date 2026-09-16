@@ -258,16 +258,45 @@ function ExportResult({ href, onDownload }: { href?: string; onDownload?: () => 
   </div>;
 }
 
-function EvidenceReviewNotice() {
+function EvidenceReviewNotice({ status = "blocked", blockers = [] }: { status?: string; blockers?: string[] }) {
+  const pending = blockers.length ? blockers : ["The catalog does not yet contain enough independently reviewed phages."];
   return (
     <section className="evidence-note" role="note" aria-label="Combination evidence status">
       <div className="evidence-note-icon"><Layers3 size={20} /></div>
       <div className="evidence-note-copy">
         <span>Combination builder</span>
-        <h2>Candidate ranking is ready</h2>
-        <p>A multi-phage combination will appear after the catalog safety evidence has been reviewed.</p>
+        <h2>{status === "blocked" ? "Ranking complete. Combination not issued." : "Combination candidate available"}</h2>
+        {pending.map((item) => <p key={item}>{item}</p>)}
       </div>
-      <div className="evidence-note-status"><i /> Evidence review pending</div>
+      <div className="evidence-note-status"><i /> {status.replaceAll("-", " ")}</div>
+    </section>
+  );
+}
+
+function NovelCocktailResult({ result }: { result: NovelIsolateRank }) {
+  if (!result.cocktail_members.length) {
+    return <EvidenceReviewNotice status={result.cocktail_status} blockers={result.cocktail_blockers} />;
+  }
+  return (
+    <section className="panel real-cocktail-card" aria-label="Reviewed cocktail candidate">
+      <div className="panel-heading">
+        <div><span className="step-label">REVIEWED COMBINATION</span><h2>Laboratory-validation candidate</h2></div>
+        <ScoreRing value={result.cocktail_objective_score ?? 0} />
+      </div>
+      <div className="cocktail-map">
+        {result.cocktail_members.map((member, index) => <div className="member-wrap" key={member}>
+          <div className="phage-orb"><Dna size={22} /><span>P{index + 1}</span></div>
+          {index < result.cocktail_members.length - 1 && <span className="connector">+</span>}
+          <strong>{member}</strong><small>reviewed catalog phage</small>
+        </div>)}
+      </div>
+      <div className="cocktail-metrics">
+        <div><span>Mean compatibility</span><strong>{Math.round((result.cocktail_mean_compatibility ?? 0) * 100)}%</strong></div>
+        <div><span>Family diversity</span><strong>{Math.round((result.cocktail_family_diversity ?? 0) * 100)}%</strong></div>
+        <div><span>Receptor diversity</span><strong>{Math.round((result.cocktail_receptor_diversity ?? 0) * 100)}%</strong></div>
+        <div><span>Redundancy</span><strong>{Math.round((result.cocktail_redundancy ?? 0) * 100)}%</strong></div>
+      </div>
+      <p className="cocktail-caveat">This is a computational research candidate. Laboratory confirmation is required before any downstream use.</p>
     </section>
   );
 }
@@ -303,6 +332,24 @@ function PhageRow({ phage, rank }: { phage: RankedPhage; rank: number }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ResearchCandidateRow({ candidate, rank }: { candidate: ResearchRank["candidates"][number]; rank: number }) {
+  return (
+    <div className="research-entry">
+      <div className="research-row">
+        <span>{String(rank).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
+        <em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
+      </div>
+      <details className="research-explanation">
+        <summary>Why this candidate ranked here</summary>
+        <div>
+          <ul>{candidate.rationale.map((item) => <li key={item}>{item}</li>)}</ul>
+          {!!candidate.attributions?.length && <section><span>Local XGBoost contributions to the raw model score</span>{candidate.attributions.map((item) => <p key={item.feature}><code>{item.feature}</code><strong>{item.contribution >= 0 ? "+" : ""}{item.contribution.toFixed(3)}</strong><small>{item.direction.replaceAll("-", " ")}</small></p>)}</section>}
+        </div>
+      </details>
     </div>
   );
 }
@@ -382,16 +429,11 @@ function ResearchResults({ result }: { result: ResearchRank }) {
         </div>
         <ExportResult href={researchRankExportUrl(result.host_id)} />
       </div>
-      <EvidenceReviewNotice />
+      <EvidenceReviewNotice status={result.cocktail_status} blockers={result.cocktail_blockers} />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">REAL PRECOMPUTED EMBEDDINGS</span><h2>Ranked dataset phages</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => (
-          <div className="research-row" key={candidate.phage_id}>
-            <span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
-            <em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
-          </div>
-        ))}
+        {result.candidates.map((candidate, index) => <ResearchCandidateRow candidate={candidate} rank={index + 1} key={candidate.phage_id} />)}
       </section>
     </main>
   );
@@ -401,11 +443,11 @@ function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
       <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div><ExportResult onDownload={() => downloadNovelRankPdf(result)} /></div>
-      <EvidenceReviewNotice />
+      <NovelCocktailResult result={result} />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
+        {result.candidates.map((candidate, index) => <ResearchCandidateRow candidate={candidate} rank={index + 1} key={candidate.phage_id} />)}
       </section>
     </main>
   );

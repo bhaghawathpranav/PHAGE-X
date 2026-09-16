@@ -2,10 +2,14 @@ from fastapi.testclient import TestClient
 import hashlib
 import importlib
 import numpy as np
+import pytest
+from types import SimpleNamespace
 
 from app.main import app
 from app.feature_providers import IsolateLocusProteinSet
 from app.species import SpeciesConfirmation
+from app.real_cocktail import RealCocktailResult
+from app.schemas import ResearchCandidate
 
 
 client = TestClient(app)
@@ -42,6 +46,12 @@ def test_uploaded_isolate_ranking_can_be_downloaded_as_pdf():
         "nearest_reference_cosine": 0.98,
         "candidates": ranked["candidates"],
         "cocktail_status": ranked["cocktail_status"],
+        "cocktail_members": [],
+        "cocktail_objective_score": None,
+        "cocktail_mean_compatibility": None,
+        "cocktail_family_diversity": None,
+        "cocktail_receptor_diversity": None,
+        "cocktail_redundancy": None,
         "cocktail_blockers": ranked["cocktail_blockers"],
         "disclaimer": ranked["disclaimer"],
     })
@@ -206,3 +216,71 @@ def test_isolate_locus_endpoint_returns_only_provenance_metadata(monkeypatch):
     assert embedding["raw_embedding_returned"] is False
     assert embedding["sequence_persisted"] is False
     assert len(embedding["embedding_sha256"]) == 64
+
+
+def test_novel_rank_response_exposes_real_cocktail_contract(monkeypatch):
+    main_module = importlib.import_module("app.main")
+    candidate = ResearchCandidate(
+        phage_id="phage-a",
+        compatibility=0.82,
+        decision="higher-priority-research-signal",
+        safety_status="reviewed",
+        rationale=["model-derived compatibility"],
+    )
+
+    monkeypatch.setattr(
+        main_module,
+        "parse_assembly_fasta",
+        lambda fasta: ([], SimpleNamespace(status="pass", assembly_sha256="a" * 64)),
+    )
+    monkeypatch.setattr(
+        main_module,
+        "FastANIRunner",
+        lambda: SimpleNamespace(
+            confirm_klebsiella_pneumoniae=lambda fasta: SimpleNamespace(
+                status="confirmed-reference-ani", ani_percent=99.7
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        main_module,
+        "IsolateLocusFeaturePipeline",
+        lambda *args: SimpleNamespace(
+            build=lambda fasta: SimpleNamespace(
+                locus="KL74", embedding=np.ones(1280, dtype=np.float32)
+            )
+        ),
+    )
+    model = SimpleNamespace(
+        card={"artifact_version": "test-model"},
+        distribution_check=lambda vector: {
+            "status": "inside-reference-envelope",
+            "nearest_reference_cosine": 0.98,
+        },
+        rank_vector=lambda vector, limit: [candidate],
+    )
+    monkeypatch.setattr(main_module, "get_research_model", lambda: model)
+    monkeypatch.setattr(
+        main_module,
+        "optimize_reviewed_cocktail",
+        lambda candidates, metadata, size: RealCocktailResult(
+            status="candidate-for-laboratory-validation",
+            members=["phage-a", "phage-b", "phage-c"],
+            objective_score=0.91,
+            mean_compatibility=0.8,
+            family_diversity=1.0,
+            receptor_diversity=2 / 3,
+            redundancy=0.0,
+            blockers=[],
+        ),
+    )
+
+    response = client.post("/api/rank-novel-isolate", json={"fasta": ">isolate\n" + "ACGT" * 25})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["cocktail_members"] == ["phage-a", "phage-b", "phage-c"]
+    assert result["cocktail_objective_score"] == 0.91
+    assert result["cocktail_mean_compatibility"] == 0.8
+    assert result["cocktail_family_diversity"] == 1.0
+    assert result["cocktail_receptor_diversity"] == pytest.approx(2 / 3)
+    assert result["cocktail_redundancy"] == 0.0

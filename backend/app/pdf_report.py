@@ -41,6 +41,8 @@ def build_research_rank_pdf(
     kicker: str = "HELD-OUT HOST REPORT",
     lead: str | None = None,
     extra_metadata: list[list[str]] | None = None,
+    combination_members: list[str] | None = None,
+    combination_metrics: Mapping[str, float | None] | None = None,
 ) -> bytes:
     title = report_title or f"Phage ranking for {result.host_id}"
     output = BytesIO()
@@ -170,15 +172,31 @@ def build_research_rank_pdf(
     explanation_blocks = []
     for index, candidate in enumerate(result.candidates[:3], 1):
         rationale = " | ".join(_ascii(item) for item in candidate.rationale)
+        attributions = " | ".join(
+            f"{_ascii(item.feature)}: {item.contribution:+.3f}"
+            for item in candidate.attributions
+        )
         explanation_blocks.extend([
             Paragraph(f"{index:02d}  {candidate.phage_id}  -  {candidate.compatibility * 100:.1f}%", styles["SectionTitle"]),
             Paragraph(rationale, styles["Small"]),
+            Paragraph(
+                f"Local XGBoost contributions to raw score: {attributions}"
+                if attributions
+                else "Local feature contributions unavailable for this record.",
+                styles["Tiny"],
+            ),
             Spacer(1, 2 * mm),
         ])
     story.extend([Paragraph("Top-candidate explanations", styles["SectionTitle"]), KeepTogether(explanation_blocks)])
 
     blockers = "<br/>".join(f"- {_ascii(item)}" for item in result.cocktail_blockers)
-    safety = Table([[Paragraph("COMBINATION STATUS", styles["ReportKicker"]), Paragraph(f"<b>{result.cocktail_status.upper()}</b><br/>{blockers}", styles["Small"]) ]], colWidths=[43 * mm, 127 * mm])
+    member_text = ", ".join(_ascii(item) for item in (combination_members or []))
+    metric_text = ""
+    if combination_metrics:
+        available = [(label, value) for label, value in combination_metrics.items() if value is not None]
+        metric_text = " | ".join(f"{label}: {float(value) * 100:.1f}%" for label, value in available)
+    details = "<br/>".join(part for part in [member_text, metric_text, blockers] if part)
+    safety = Table([[Paragraph("COMBINATION STATUS", styles["ReportKicker"]), Paragraph(f"<b>{result.cocktail_status.upper()}</b><br/>{details}", styles["Small"]) ]], colWidths=[43 * mm, 127 * mm])
     safety.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF7FA")),
         ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#F2B8D4")),
@@ -217,4 +235,12 @@ def build_novel_rank_pdf(result: NovelIsolateRankResponse, status: Mapping[str, 
             ["Species ANI", f"{result.species_ani_percent:.2f}%", "Distribution check", _ascii(result.distribution_status.replace("-", " ").title())],
             ["Capsule locus", _ascii(result.locus), "Nearest reference", f"{result.nearest_reference_cosine:.3f} cosine"],
         ],
+        combination_members=result.cocktail_members,
+        combination_metrics={
+            "Objective": result.cocktail_objective_score,
+            "Mean compatibility": result.cocktail_mean_compatibility,
+            "Family diversity": result.cocktail_family_diversity,
+            "Receptor diversity": result.cocktail_receptor_diversity,
+            "Redundancy": result.cocktail_redundancy,
+        },
     )

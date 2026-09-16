@@ -8,7 +8,7 @@ PHAGE-X does not determine susceptibility, prescribe a cocktail, or support trea
 
 ## Project status
 
-This repository contains a working end-to-end prototype and a reproducible model benchmark. It is not a clinically validated system and the model artifact is deliberately marked as not approved for release.
+This repository contains a working genome-to-ranking prototype and a reproducible model benchmark. The combination optimizer is implemented and tested, but the shipped catalog has no phages with complete independently reviewed family, receptor, and genomic-safety evidence. Real runs therefore stop after ranking and report the evidence blocker instead of issuing a combination. The system is not clinically validated and the model artifact is deliberately marked as not approved for release.
 
 Implemented:
 
@@ -18,7 +18,7 @@ Implemented:
 - local ESM-2 `esm2_t33_650M_UR50D` inference with a sequence-free cache
 - calibrated XGBoost ranking against 105 phages
 - host-disjoint model evaluation on held-out bacterial isolates
-- explainable candidate output and downloadable PDF reports
+- per-candidate XGBoost feature contributions and downloadable PDF reports
 - fail-closed cocktail and genomic-evidence gates
 - FastAPI service, React interface, CI, containers, audit metadata, and tests
 
@@ -29,6 +29,7 @@ Still required before scientific or operational release:
 - comparison with additional biological and statistical baselines
 - subgroup analysis across capsule loci, sequence types, and source studies
 - independent review of genomic safety evidence
+- reviewed family and receptor metadata for enough catalog phages to construct a diverse combination
 - prospective wet-lab validation
 - identity, tenant isolation, managed secrets, monitoring, and an external security review
 
@@ -89,6 +90,8 @@ Each host-phage pair is represented by 11 compact features:
 ### Ranking model
 
 The classifier is XGBoost with class weighting for the imbalanced interaction labels. Raw model scores are calibrated by logistic regression on validation hosts. The binary decision threshold is selected on the validation split only. Runtime artifacts and source data are verified against SHA-256 manifests before use.
+
+Each ranked candidate also includes its three largest local XGBoost feature contributions. These values explain the direction and magnitude of features in the raw tree-model score. They do not explain the downstream logistic calibration or establish a biological mechanism.
 
 ## Data and evaluation
 
@@ -194,6 +197,15 @@ npm run build
 ```
 
 GitHub Actions repeats the backend tests, frontend production build, and container build for every push and pull request.
+
+The heavier local acceptance test uses the bundled verified genome and the installed native/ESM-2 toolchain:
+
+```bash
+PHAGEX_RUN_REAL_PIPELINE=1 PYTHONPATH=backend \
+  .venv/bin/pytest -q backend/tests/test_real_pipeline_acceptance.py
+```
+
+It verifies assembly parsing, fastANI species confirmation, Kaptive KL74 extraction, a finite 1,280-dimensional ESM-2 representation, calibrated ranking of all 105 phages, the reviewed-evidence gate, and PDF creation. With the repository's current evidence registry, the expected combination state is `blocked`; a selected 2–3 phage result would be dishonest until real reviewed metadata is added.
 
 ## Repository structure
 

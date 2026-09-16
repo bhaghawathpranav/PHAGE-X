@@ -62,6 +62,11 @@ export type ResearchRank = {
     decision: string;
     safety_status: string;
     rationale: string[];
+    attributions: {
+      feature: string;
+      contribution: number;
+      direction: string;
+    }[];
   }[];
   cocktail_status: string;
   cocktail_blockers: string[];
@@ -171,6 +176,12 @@ export type NovelIsolateRank = {
   nearest_reference_cosine: number;
   candidates: ResearchRank["candidates"];
   cocktail_status: string;
+  cocktail_members: string[];
+  cocktail_objective_score: number | null;
+  cocktail_mean_compatibility: number | null;
+  cocktail_family_diversity: number | null;
+  cocktail_receptor_diversity: number | null;
+  cocktail_redundancy: number | null;
   cocktail_blockers: string[];
   disclaimer: string;
 };
