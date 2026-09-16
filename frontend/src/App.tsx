@@ -467,9 +467,30 @@ function speciesValidationFailure(message: string): SpeciesValidationFailure | n
   };
 }
 
+function assemblyQcFailure(message: string): string[] | null {
+  const match = message.match(/^Assembly QC stopped [^:]+:\s*(.+?)\.\s*Use a complete K\. pneumoniae whole-genome assembly/i);
+  if (!match) return null;
+  return match[1].split(";").map((reason) => reason.trim()).filter(Boolean);
+}
+
 function AnalysisError({ message }: { message: string }) {
   const cleanMessage = message.replace(/^\s*\d{3}:\s*/i, "");
   const speciesFailure = speciesValidationFailure(cleanMessage);
+  const qcFailure = assemblyQcFailure(cleanMessage);
+  if (qcFailure) {
+    return (
+      <section className="validation-result validation-qc" role="status" aria-labelledby="assembly-validation-title">
+        <div className="validation-result-icon"><ShieldCheck size={24} /></div>
+        <div className="validation-result-copy">
+          <span>INPUT CHECK COMPLETE · WHOLE GENOME REQUIRED</span>
+          <h3 id="assembly-validation-title">This FASTA is valid, but it is not a usable complete genome assembly.</h3>
+          <p>Ranking stopped intentionally before species typing, K-locus extraction, and machine learning. A short sequence or highly fragmented assembly cannot produce the host representation used to train this model.</p>
+          <ul className="validation-reasons">{qcFailure.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+          <p className="validation-next"><strong>Next step:</strong> upload a complete new <em>K. pneumoniae</em> assembly. It does not need to be pre-registered. The verified example is available only if you want to test the workflow.</p>
+        </div>
+      </section>
+    );
+  }
   if (!speciesFailure) {
     return <div className="error" role="alert"><AlertTriangle size={19} />{cleanMessage}</div>;
   }

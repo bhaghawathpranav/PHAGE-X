@@ -301,6 +301,7 @@ footer{background:#050507;border-color:rgba(255,255,255,.08);color:#737786}
 .validation-measures small{color:#77717c;font-size:10px}
 .validation-result-copy .validation-next{margin-top:17px;color:#c7bbc0}
 .validation-next strong{color:#f3e7eb}
+.validation-reasons{display:grid;gap:8px;margin:18px 0 0;padding:0;list-style:none}.validation-reasons li{position:relative;padding:11px 13px 11px 34px;border:1px solid rgba(245,190,82,.16);border-radius:8px;background:rgba(6,6,10,.34);color:#d5c6cb;font-size:11px;line-height:1.45}.validation-reasons li:before{content:"!";position:absolute;left:13px;top:10px;color:#f3c76e;font:700 12px 'DM Mono'}
 @media(max-width:700px){
   .input-panel .upload-label-row{align-items:stretch;flex-direction:column;gap:12px}
   .input-panel .upload-label-row>label{padding:0}
