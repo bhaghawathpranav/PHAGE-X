@@ -24,7 +24,7 @@ from .jobs import BoundedJobManager, serialize_job
 from .observability import RequestContextMiddleware
 from .security import ProductionSecurityMiddleware
 from .phage_catalog import validate_phage_catalog
-from .pdf_report import build_research_rank_pdf
+from .pdf_report import build_novel_rank_pdf, build_research_rank_pdf
 from .phage_screening import evidence_status, load_reviewed_metadata, registry_status
 from .research_model import get_research_model
 from .real_cocktail import optimize_reviewed_cocktail
@@ -221,6 +221,16 @@ def export_research_rank(host_id: str):
     )
 
 
+@app.post("/api/novel-rank/export")
+def export_novel_rank(result: NovelIsolateRankResponse):
+    safe_name = re.sub(r"[^a-zA-Z0-9-]+", "-", result.locus).strip("-").lower() or "uploaded-isolate"
+    return Response(
+        content=build_novel_rank_pdf(result, get_research_model().status()),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}-phage-ranking.pdf"'},
+    )
+
+
 @app.get("/api/processing-capabilities")
 def processing_capabilities():
     return capability_report()
@@ -377,6 +387,12 @@ def rank_novel_isolate(request: NovelIsolateRankRequest):
         nearest_reference_cosine=distribution["nearest_reference_cosine"],
         candidates=candidates,
         cocktail_status=cocktail.status,
+        cocktail_members=cocktail.members,
+        cocktail_objective_score=cocktail.objective_score,
+        cocktail_mean_compatibility=cocktail.mean_compatibility,
+        cocktail_family_diversity=cocktail.family_diversity,
+        cocktail_receptor_diversity=cocktail.receptor_diversity,
+        cocktail_redundancy=cocktail.redundancy,
         cocktail_blockers=cocktail.blockers + ["Novel-isolate predictions require laboratory confirmation"],
         disclaimer="For laboratory validation only — novel-isolate research ranking, not treatment selection.",
     )

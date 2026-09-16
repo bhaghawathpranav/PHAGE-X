@@ -1,4 +1,5 @@
 from app.research_model import get_research_model
+from app.pair_features import FEATURE_NAMES
 import numpy as np
 
 
@@ -43,6 +44,17 @@ def test_novel_vector_path_uses_same_real_phage_catalog():
     assert distribution["nearest_reference_cosine"] > 0.999
     assert len(candidates) == 7
     assert all(candidate.rationale for candidate in candidates)
+    assert all(len(candidate.attributions) == 3 for candidate in candidates)
+    assert all(
+        attribution.feature in FEATURE_NAMES
+        for candidate in candidates
+        for attribution in candidate.attributions
+    )
+    assert all(
+        attribution.direction in {"increases-raw-model-score", "decreases-raw-model-score"}
+        for candidate in candidates
+        for attribution in candidate.attributions
+    )
     assert all(candidate.safety_status.startswith("blocked") for candidate in candidates)
 
 

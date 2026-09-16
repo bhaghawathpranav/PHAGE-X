@@ -17,7 +17,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from .schemas import ResearchRankResponse
+from .schemas import NovelIsolateRankResponse, ResearchRankResponse
 
 
 INK = colors.HexColor("#111827")
@@ -33,7 +33,18 @@ def _ascii(text: str) -> str:
     return text.replace("—", "-").replace("–", "-").replace("→", "->")
 
 
-def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, Any]) -> bytes:
+def build_research_rank_pdf(
+    result: ResearchRankResponse,
+    status: Mapping[str, Any],
+    *,
+    report_title: str | None = None,
+    kicker: str = "HELD-OUT HOST REPORT",
+    lead: str | None = None,
+    extra_metadata: list[list[str]] | None = None,
+    combination_members: list[str] | None = None,
+    combination_metrics: Mapping[str, float | None] | None = None,
+) -> bytes:
+    title = report_title or f"Phage ranking for {result.host_id}"
     output = BytesIO()
     document = SimpleDocTemplate(
         output,
@@ -42,7 +53,7 @@ def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, A
         leftMargin=16 * mm,
         topMargin=20 * mm,
         bottomMargin=18 * mm,
-        title=f"PHAGE-X ranking report - {result.host_id}",
+        title=f"PHAGE-X ranking report - {title}",
         author="PHAGE-X",
         subject="Explainable phage-host compatibility research ranking",
     )
@@ -73,10 +84,10 @@ def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, A
         canvas.restoreState()
 
     story = [
-        Paragraph("HELD-OUT HOST REPORT", styles["ReportKicker"]),
-        Paragraph(f"Phage ranking for {result.host_id}", styles["ReportTitle"]),
+        Paragraph(kicker, styles["ReportKicker"]),
+        Paragraph(title, styles["ReportTitle"]),
         Paragraph(
-            "An explainable compatibility ranking against the PHAGE-X catalog. Scores prioritize candidates for research follow-up and do not establish susceptibility, safety, or treatment suitability.",
+            lead or "An explainable compatibility ranking against the PHAGE-X catalog. Scores prioritize candidates for research follow-up and do not establish susceptibility, safety, or treatment suitability.",
             styles["ReportLead"],
         ),
     ]
@@ -108,10 +119,13 @@ def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, A
     ]))
     story.extend([metric_table, Spacer(1, 4 * mm)])
 
-    metadata = Table([
+    metadata_rows = [
         ["Host role", _ascii(result.split_role.replace("-", " ").title()), "Model version", _ascii(result.model_version)],
         ["Feature source", _ascii(result.feature_source), "Catalog size", str(status.get("candidate_phages", 105))],
-    ], colWidths=[26 * mm, 58 * mm, 28 * mm, 58 * mm])
+    ]
+    if extra_metadata:
+        metadata_rows.extend(extra_metadata)
+    metadata = Table(metadata_rows, colWidths=[26 * mm, 58 * mm, 28 * mm, 58 * mm])
     metadata.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
@@ -158,15 +172,31 @@ def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, A
     explanation_blocks = []
     for index, candidate in enumerate(result.candidates[:3], 1):
         rationale = " | ".join(_ascii(item) for item in candidate.rationale)
+        attributions = " | ".join(
+            f"{_ascii(item.feature)}: {item.contribution:+.3f}"
+            for item in candidate.attributions
+        )
         explanation_blocks.extend([
             Paragraph(f"{index:02d}  {candidate.phage_id}  -  {candidate.compatibility * 100:.1f}%", styles["SectionTitle"]),
             Paragraph(rationale, styles["Small"]),
+            Paragraph(
+                f"Local XGBoost contributions to raw score: {attributions}"
+                if attributions
+                else "Local feature contributions unavailable for this record.",
+                styles["Tiny"],
+            ),
             Spacer(1, 2 * mm),
         ])
     story.extend([Paragraph("Top-candidate explanations", styles["SectionTitle"]), KeepTogether(explanation_blocks)])
 
     blockers = "<br/>".join(f"- {_ascii(item)}" for item in result.cocktail_blockers)
-    safety = Table([[Paragraph("COMBINATION STATUS", styles["ReportKicker"]), Paragraph(f"<b>{result.cocktail_status.upper()}</b><br/>{blockers}", styles["Small"]) ]], colWidths=[43 * mm, 127 * mm])
+    member_text = ", ".join(_ascii(item) for item in (combination_members or []))
+    metric_text = ""
+    if combination_metrics:
+        available = [(label, value) for label, value in combination_metrics.items() if value is not None]
+        metric_text = " | ".join(f"{label}: {float(value) * 100:.1f}%" for label, value in available)
+    details = "<br/>".join(part for part in [member_text, metric_text, blockers] if part)
+    safety = Table([[Paragraph("COMBINATION STATUS", styles["ReportKicker"]), Paragraph(f"<b>{result.cocktail_status.upper()}</b><br/>{details}", styles["Small"]) ]], colWidths=[43 * mm, 127 * mm])
     safety.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF7FA")),
         ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#F2B8D4")),
@@ -179,3 +209,38 @@ def build_research_rank_pdf(result: ResearchRankResponse, status: Mapping[str, A
     story.extend([Spacer(1, 4 * mm), safety, Spacer(1, 5 * mm), Paragraph(f"<b>Important:</b> {_ascii(result.disclaimer)}", styles["Tiny"])])
     document.build(story, onFirstPage=decorate_page, onLaterPages=decorate_page)
     return output.getvalue()
+
+
+def build_novel_rank_pdf(result: NovelIsolateRankResponse, status: Mapping[str, Any]) -> bytes:
+    report_result = ResearchRankResponse(
+        host_id=result.locus,
+        split_role="uploaded-novel-isolate",
+        model_version=result.model_version,
+        feature_source=result.feature_source,
+        candidates=result.candidates,
+        cocktail_status=result.cocktail_status,
+        cocktail_blockers=result.cocktail_blockers,
+        disclaimer=result.disclaimer,
+    )
+    return build_research_rank_pdf(
+        report_result,
+        status,
+        report_title=f"Uploaded-isolate ranking for {result.locus}",
+        kicker="UPLOADED GENOME REPORT",
+        lead=(
+            f"The submitted assembly passed species confirmation at {result.species_ani_percent:.2f}% ANI. "
+            "Its capsule-locus protein representation was ranked against the PHAGE-X catalog for research follow-up."
+        ),
+        extra_metadata=[
+            ["Species ANI", f"{result.species_ani_percent:.2f}%", "Distribution check", _ascii(result.distribution_status.replace("-", " ").title())],
+            ["Capsule locus", _ascii(result.locus), "Nearest reference", f"{result.nearest_reference_cosine:.3f} cosine"],
+        ],
+        combination_members=result.cocktail_members,
+        combination_metrics={
+            "Objective": result.cocktail_objective_score,
+            "Mean compatibility": result.cocktail_mean_compatibility,
+            "Family diversity": result.cocktail_family_diversity,
+            "Receptor diversity": result.cocktail_receptor_diversity,
+            "Redundancy": result.cocktail_redundancy,
+        },
+    )

@@ -6,6 +6,10 @@ services:
       PHAGEX_ENVIRONMENT: production
       PHAGEX_ALLOWED_ORIGINS: ${PHAGEX_ALLOWED_ORIGINS:-http://localhost:8080}
       PHAGEX_VERSION: ${PHAGEX_VERSION:-0.2.0}
+      PHAGEX_API_KEY: ${PHAGEX_API_KEY:?Set PHAGEX_API_KEY to at least 24 random characters}
+      PHAGEX_RATE_LIMIT_PER_MINUTE: ${PHAGEX_RATE_LIMIT_PER_MINUTE:-60}
+    volumes:
+      - phagex_state:/app/work
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready')"]
       interval: 10s
@@ -19,6 +23,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    environment:
+      API_UPSTREAM: api:8000
+      PHAGEX_API_KEY: ${PHAGEX_API_KEY:?Set PHAGEX_API_KEY to at least 24 random characters}
+      NGINX_ENVSUBST_FILTER: ^(API_UPSTREAM|PHAGEX_API_KEY)$
     ports:
       - "${PHAGEX_PORT:-8080}:8080"
     healthcheck:
@@ -28,3 +36,5 @@ services:
       retries: 5
     restart: unless-stopped
 
+volumes:
+  phagex_state:

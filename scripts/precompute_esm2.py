@@ -7,17 +7,28 @@ from pathlib import Path
 
 import numpy as np
 
-from app.feature_providers import EmbeddingCache, ESM2Embedder, KaptiveRunner, ReferenceLocusFeaturePipeline
+from app.config import get_settings
+from app.feature_providers import (
+    ESM2_DIMENSIONS,
+    EmbeddingCache,
+    ESM2Embedder,
+    KaptiveRunner,
+    ReferenceLocusFeaturePipeline,
+    esm2_representation_contract,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--locus", default="KL107")
-    parser.add_argument("--cache", type=Path, default=Path("work/embeddings/esm2.sqlite3"))
+    parser.add_argument("--cache", type=Path, default=None)
     args = parser.parse_args()
+    cache_path = args.cache if args.cache is not None else get_settings().embedding_cache
     result = ReferenceLocusFeaturePipeline(
-        KaptiveRunner(), ESM2Embedder(EmbeddingCache(args.cache))
+        KaptiveRunner(), ESM2Embedder(EmbeddingCache(cache_path))
     ).build(args.locus)
+    if result.embedding.shape != (ESM2_DIMENSIONS,) or not np.isfinite(result.embedding).all():
+        raise RuntimeError("Precomputed ESM-2 representation failed its runtime contract")
     print(
         json.dumps(
             {
@@ -27,7 +38,8 @@ def main() -> None:
                 "finite": bool(np.isfinite(result.embedding).all()),
                 "protein_set_sha256": result.protein_set_sha256,
                 "embedding_cache_key": result.embedding_cache_key,
-                "cache": str(args.cache),
+                "cache": str(cache_path.resolve()),
+                "representation_contract": esm2_representation_contract(),
             },
             sort_keys=True,
         )

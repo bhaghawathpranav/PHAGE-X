@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 import joblib
 import numpy as np
+import xgboost as xgb
 
 from ml.registry import verify_release_manifest
 
@@ -103,6 +104,9 @@ class ResearchModel:
         )
         raw = self.model.predict_proba(features)[:, 1]
         probabilities = self.calibrator.predict_proba(raw.reshape(-1, 1))[:, 1]
+        contributions = self.model.get_booster().predict(
+            xgb.DMatrix(features), pred_contribs=True
+        )[:, : len(FEATURE_NAMES)]
         order = np.argsort(probabilities)[::-1][:limit]
         candidates: List[ResearchCandidate] = []
         for index in order:
@@ -112,6 +116,17 @@ class ResearchModel:
                 if probability >= self.decision_threshold
                 else "lower-priority-research-signal"
             )
+            strongest = np.argsort(np.abs(contributions[index]))[::-1][:3]
+            attributions = [
+                {
+                    "feature": FEATURE_NAMES[feature_index],
+                    "contribution": round(float(contributions[index, feature_index]), 6),
+                    "direction": "increases-raw-model-score"
+                    if contributions[index, feature_index] >= 0
+                    else "decreases-raw-model-score",
+                }
+                for feature_index in strongest
+            ]
             candidates.append(
                 ResearchCandidate(
                     phage_id=str(self.phage_ids[index]),
@@ -123,6 +138,7 @@ class ResearchModel:
                         f"Embedding distance: {features[index, 1]:.3f}",
                         f"Released RBP proteins represented: {int(self.rbp_counts[index])}",
                     ],
+                    attributions=attributions,
                 )
             )
         return candidates

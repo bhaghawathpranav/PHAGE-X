@@ -2,13 +2,13 @@
 
 ## Local production-shaped deployment
 
-1. Copy `.env.example` to `.env` and set the public origin when it differs from localhost.
+1. Copy `.env.example` to `.env`, replace `PHAGEX_API_KEY` with a random value of at least 24 characters, and set the public origin when it differs from localhost.
 2. Run `docker compose up --build -d`.
 3. Check `http://localhost:8080/healthz` and `http://localhost:8080/api/ready`.
-4. Open `http://localhost:8080` and complete both the preloaded and FASTA demo flows.
+4. Open `http://localhost:8080` and complete the held-out model-validation flow.
 5. Stop with `docker compose down`.
 
-The web container serves static assets and proxies `/api` to the private API service. The API is not published directly by Compose.
+The web container serves static assets and proxies `/api` to the private API service. It adds the internal API key at the trusted gateway, so the credential is not embedded in browser code. The API is not published directly by Compose. The default backend image contains the trained ranking artifact but not the 2.60 GB ESM-2 checkpoint or host-installed fastANI/minimap2 binaries; the complete uploaded-genome route requires a separate feature-worker image or mounted runtime with those dependencies.
 
 ## Before any public environment
 

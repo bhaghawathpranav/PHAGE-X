@@ -110,12 +110,19 @@ class ResearchRankRequest(BaseModel):
     limit: int = Field(default=20, ge=1, le=105)
 
 
+class FeatureAttribution(BaseModel):
+    feature: str
+    contribution: float
+    direction: str
+
+
 class ResearchCandidate(BaseModel):
     phage_id: str
     compatibility: float
     decision: str
     safety_status: str
-    rationale: List[str] = []
+    rationale: List[str] = Field(default_factory=list)
+    attributions: List[FeatureAttribution] = Field(default_factory=list)
 
 
 class ResearchRankResponse(BaseModel):
@@ -226,6 +233,12 @@ class NovelIsolateRankResponse(BaseModel):
     nearest_reference_cosine: float
     candidates: List[ResearchCandidate]
     cocktail_status: str
+    cocktail_members: List[str]
+    cocktail_objective_score: Optional[float] = None
+    cocktail_mean_compatibility: Optional[float] = None
+    cocktail_family_diversity: Optional[float] = None
+    cocktail_receptor_diversity: Optional[float] = None
+    cocktail_redundancy: Optional[float] = None
     cocktail_blockers: List[str]
     disclaimer: str
 

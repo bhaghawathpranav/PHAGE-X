@@ -16,7 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import { embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, getVerifiedSampleFasta, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
+import { apiDocsUrl, downloadNovelRankPdf, embedIsolateLocus, extractIsolateLocus, getProcessingCapabilities, getResearchIsolates, getResearchModelStatus, getVerifiedSampleFasta, inspectAssembly, rankNovelIsolateInBackground, rankResearchHost, researchRankExportUrl } from "./api";
 import type { Analysis, AssemblyInspection, Isolate, IsolateEmbedding, IsolateLocusExtraction, NovelIsolateRank, ProcessingCapabilities, RankedPhage, ResearchModelStatus, ResearchRank } from "./types";
 
 type DnaPoint = { x: number; y: number; z: number };
@@ -241,22 +241,62 @@ function ScoreRing({ value, size = 74 }: { value: number; size?: number }) {
   );
 }
 
-function ExportResult({ data, name, href: downloadHref }: { data: unknown; name: string; href?: string }) {
-  const filename = `${name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-phage-ranking.json`;
-  const href = downloadHref || `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
-  return <a className="result-export" href={href} download={downloadHref ? undefined : filename}><Download size={14} /> Download PDF</a>;
+function ExportResult({ href, onDownload }: { href?: string; onDownload?: () => Promise<void> }) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+  if (href) return <a className="result-export" href={href}><Download size={14} /> Download PDF</a>;
+  if (!onDownload) return null;
+  return <div className="export-action">
+    <button className="result-export" type="button" disabled={downloading} onClick={async () => {
+      setDownloading(true);
+      setDownloadError("");
+      try { await onDownload(); }
+      catch (error) { setDownloadError(error instanceof Error ? error.message : "The PDF report could not be generated."); }
+      finally { setDownloading(false); }
+    }}><Download size={14} /> {downloading ? "Preparing PDF…" : "Download PDF"}</button>
+    {downloadError && <span className="export-error" role="alert">{downloadError}</span>}
+  </div>;
 }
 
-function EvidenceReviewNotice() {
+function EvidenceReviewNotice({ status = "blocked", blockers = [] }: { status?: string; blockers?: string[] }) {
+  const pending = blockers.length ? blockers : ["The catalog does not yet contain enough independently reviewed phages."];
   return (
     <section className="evidence-note" role="note" aria-label="Combination evidence status">
       <div className="evidence-note-icon"><Layers3 size={20} /></div>
       <div className="evidence-note-copy">
         <span>Combination builder</span>
-        <h2>Candidate ranking is ready</h2>
-        <p>A multi-phage combination will appear after the catalog safety evidence has been reviewed.</p>
+        <h2>{status === "blocked" ? "Ranking complete. Combination not issued." : "Combination candidate available"}</h2>
+        {pending.map((item) => <p key={item}>{item}</p>)}
       </div>
-      <div className="evidence-note-status"><i /> Evidence review pending</div>
+      <div className="evidence-note-status"><i /> {status.replaceAll("-", " ")}</div>
+    </section>
+  );
+}
+
+function NovelCocktailResult({ result }: { result: NovelIsolateRank }) {
+  if (!result.cocktail_members.length) {
+    return <EvidenceReviewNotice status={result.cocktail_status} blockers={result.cocktail_blockers} />;
+  }
+  return (
+    <section className="panel real-cocktail-card" aria-label="Reviewed cocktail candidate">
+      <div className="panel-heading">
+        <div><span className="step-label">REVIEWED COMBINATION</span><h2>Laboratory-validation candidate</h2></div>
+        <ScoreRing value={result.cocktail_objective_score ?? 0} />
+      </div>
+      <div className="cocktail-map">
+        {result.cocktail_members.map((member, index) => <div className="member-wrap" key={member}>
+          <div className="phage-orb"><Dna size={22} /><span>P{index + 1}</span></div>
+          {index < result.cocktail_members.length - 1 && <span className="connector">+</span>}
+          <strong>{member}</strong><small>reviewed catalog phage</small>
+        </div>)}
+      </div>
+      <div className="cocktail-metrics">
+        <div><span>Mean compatibility</span><strong>{Math.round((result.cocktail_mean_compatibility ?? 0) * 100)}%</strong></div>
+        <div><span>Family diversity</span><strong>{Math.round((result.cocktail_family_diversity ?? 0) * 100)}%</strong></div>
+        <div><span>Receptor diversity</span><strong>{Math.round((result.cocktail_receptor_diversity ?? 0) * 100)}%</strong></div>
+        <div><span>Redundancy</span><strong>{Math.round((result.cocktail_redundancy ?? 0) * 100)}%</strong></div>
+      </div>
+      <p className="cocktail-caveat">This is a computational research candidate. Laboratory confirmation is required before any downstream use.</p>
     </section>
   );
 }
@@ -296,6 +336,24 @@ function PhageRow({ phage, rank }: { phage: RankedPhage; rank: number }) {
   );
 }
 
+function ResearchCandidateRow({ candidate, rank }: { candidate: ResearchRank["candidates"][number]; rank: number }) {
+  return (
+    <div className="research-entry">
+      <div className="research-row">
+        <span>{String(rank).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
+        <em>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
+      </div>
+      <details className="research-explanation">
+        <summary>Why this candidate ranked here</summary>
+        <div>
+          <ul>{candidate.rationale.map((item) => <li key={item}>{item}</li>)}</ul>
+          {!!candidate.attributions?.length && <section><span>Local XGBoost contributions to the raw model score</span>{candidate.attributions.map((item) => <p key={item.feature}><code>{item.feature}</code><strong>{item.contribution >= 0 ? "+" : ""}{item.contribution.toFixed(3)}</strong><small>{item.direction.replaceAll("-", " ")}</small></p>)}</section>}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function Results({ result }: { result: Analysis }) {
   return (
     <main className="results page-shell">
@@ -305,7 +363,6 @@ function Results({ result }: { result: Analysis }) {
           <h1>Candidate landscape for <em>{result.isolate.name}</em></h1>
           <p>{result.isolate.organism} · {result.isolate.sequence_type} · {result.isolate.k_locus}</p>
         </div>
-        <ExportResult data={result} name={result.isolate.name} />
       </div>
 
       <section className="result-grid">
@@ -370,18 +427,13 @@ function ResearchResults({ result }: { result: ResearchRank }) {
           <h1>Real-model ranking for <em>{result.host_id}</em></h1>
           <p>Ranked against the available phage catalog</p>
         </div>
-        <ExportResult data={result} name={result.host_id} href={researchRankExportUrl(result.host_id)} />
+        <ExportResult href={researchRankExportUrl(result.host_id)} />
       </div>
-      <EvidenceReviewNotice />
+      <EvidenceReviewNotice status={result.cocktail_status} blockers={result.cocktail_blockers} />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">REAL PRECOMPUTED EMBEDDINGS</span><h2>Ranked dataset phages</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => (
-          <div className="research-row" key={candidate.phage_id}>
-            <span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong>
-            <em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b>
-          </div>
-        ))}
+        {result.candidates.map((candidate, index) => <ResearchCandidateRow candidate={candidate} rank={index + 1} key={candidate.phage_id} />)}
       </section>
     </main>
   );
@@ -390,14 +442,61 @@ function ResearchResults({ result }: { result: ResearchRank }) {
 function NovelResults({ result }: { result: NovelIsolateRank }) {
   return (
     <main className="results page-shell">
-      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div><ExportResult data={result} name={result.locus} /></div>
-      <EvidenceReviewNotice />
+      <div className="results-head"><div><span className="eyebrow"><Network size={14} /> NOVEL ISOLATE RESEARCH RANKING</span><h1>Real catalog ranking for <em>{result.locus}</em></h1><p>{result.species_ani_percent.toFixed(2)}% species match</p></div><ExportResult onDownload={() => downloadNovelRankPdf(result)} /></div>
+      <NovelCocktailResult result={result} />
       <section className="panel ranking-panel">
         <div className="panel-heading compact"><div><span className="step-label">105-PHAGE RBP CATALOG</span><h2>Ranked candidates</h2></div><span className="catalog-count">top {result.candidates.length}</span></div>
         <div className="research-ranking-head"><span>Rank</span><span>Phage ID</span><span>Decision</span><span>Score</span></div>
-        {result.candidates.map((candidate, index) => <div className="research-row" key={candidate.phage_id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{candidate.phage_id}</strong><em title={`${candidate.safety_status}. ${candidate.rationale.join(" ")}`}>{candidate.decision.replaceAll("-", " ")}</em><b>{Math.round(candidate.compatibility * 100)}%</b></div>)}
+        {result.candidates.map((candidate, index) => <ResearchCandidateRow candidate={candidate} rank={index + 1} key={candidate.phage_id} />)}
       </section>
     </main>
+  );
+}
+
+type SpeciesValidationFailure = {
+  aniPercent: number;
+  alignmentFraction: number;
+};
+
+function speciesValidationFailure(message: string): SpeciesValidationFailure | null {
+  const match = message.match(/Species confirmation failed:\s*ANI\s*([\d.]+)%\s*and alignment fraction\s*([\d.]+)/i);
+  if (!match) return null;
+  return {
+    aniPercent: Number(match[1]),
+    alignmentFraction: Number(match[2]),
+  };
+}
+
+function AnalysisError({ message }: { message: string }) {
+  const cleanMessage = message.replace(/^\s*\d{3}:\s*/i, "");
+  const speciesFailure = speciesValidationFailure(cleanMessage);
+  if (!speciesFailure) {
+    return <div className="error" role="alert"><AlertTriangle size={19} />{cleanMessage}</div>;
+  }
+
+  const observedAlignment = speciesFailure.alignmentFraction * 100;
+  return (
+    <section className="validation-result validation-mismatch" role="status" aria-labelledby="species-validation-title">
+      <div className="validation-result-icon"><ShieldCheck size={24} /></div>
+      <div className="validation-result-copy">
+        <span>INPUT CHECK COMPLETE · OUTSIDE SUPPORTED RANGE</span>
+        <h3 id="species-validation-title">This assembly does not match the model’s supported <em>K. pneumoniae</em> reference range.</h3>
+        <p>The app is working and the FASTA passed basic assembly checks. Ranking stopped intentionally because both species-similarity measures are below the validated input thresholds.</p>
+        <div className="validation-measures">
+          <div>
+            <span>Average nucleotide identity</span>
+            <strong>{speciesFailure.aniPercent.toFixed(2)}%</strong>
+            <small>Required: at least 95%</small>
+          </div>
+          <div>
+            <span>Genome alignment coverage</span>
+            <strong>{observedAlignment.toFixed(1)}%</strong>
+            <small>Required: at least 65%</small>
+          </div>
+        </div>
+        <p className="validation-next"><strong>Next step:</strong> upload a complete <em>K. pneumoniae</em> genome assembly, or choose “Load verified K. pneumoniae” to run the full workflow.</p>
+      </div>
+    </section>
   );
 }
 
@@ -559,9 +658,9 @@ export default function App() {
           <div className="tabs">
             <button className={mode === "demo" ? "active" : ""} onClick={() => changeMode("demo")}>XGBoost sample</button>
             <button className={mode === "upload" ? "active" : ""} onClick={() => changeMode("upload")}><Upload size={15} />Use my FASTA</button>
-            <button className={mode === "research" ? "active" : ""} onClick={() => changeMode("research")}><Network size={15} />Model benchmark</button>
+            <button className={mode === "research" ? "active" : ""} onClick={() => changeMode("research")}><Network size={15} />Model validation</button>
           </div>
-          <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Checks the model on known isolates that were excluded from training. Use this to demonstrate model performance, not to analyze your own sequence."}</p>
+          <p className="mode-help">{mode === "demo" ? "Choose a real held-out Klebsiella isolate with precomputed protein features. Generate calls the trained XGBoost model." : mode === "upload" ? "Upload a bacterial genome assembly in FASTA format. The file must start with a > header line." : "Validate the trained model on isolates it never saw during training. This checks whether known interacting phages are ranked near the top; it does not analyze a new FASTA file."}</p>
 
           {mode === "demo" ? (
             <div className="case-list">
@@ -602,7 +701,7 @@ export default function App() {
                     } finally {
                       setSampleLoading(false);
                     }
-                  }}>{sampleLoading ? "Loading…" : "Load verified example"}</button>
+                  }}>{sampleLoading ? "Loading verified assembly…" : "Load verified K. pneumoniae"}</button>
                   <button type="button" className="file-control choose-file" onClick={() => fileInputRef.current?.click()}><Upload size={12} /> Choose FASTA file</button>
                   <input ref={fileInputRef} className="native-file-input" type="file" accept=".fasta,.fa,.fna,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadFastaFile(file); event.target.value = ""; }} />
                 </div>
@@ -621,7 +720,7 @@ export default function App() {
                 <div><span>02</span><strong>Species + capsule</strong><small>fastANI and Kaptive</small></div>
                 <div><span>03</span><strong>Protein features</strong><small>Local ESM-2 embeddings</small></div>
                 <div><span>04</span><strong>Phage ranking</strong><small>Calibrated XGBoost, 105 phages</small></div>
-                <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
+                <a href={apiDocsUrl()} target="_blank" rel="noreferrer">Open FastAPI routes ↗</a>
               </div>
               <button className="inspect-button" onClick={async () => {
                 setError("");
@@ -651,6 +750,13 @@ export default function App() {
             </div>
           ) : (
             <div className="research-picker">
+              <section className="benchmark-purpose">
+                <div><Network size={20} /></div>
+                <span>WHAT THIS TAB DOES</span>
+                <h3>Tests whether the model retrieves known phage matches.</h3>
+                <p>Select a held-out isolate with known interaction labels. PHAGE-X ranks all 105 candidate phages, then you can compare its shortlist with the known results and review Top-5 recall, ROC-AUC, PR-AUC, and positive recall.</p>
+                <small>Use “My FASTA” for a new genome. Use this tab only to show model evaluation evidence.</small>
+              </section>
               <label htmlFor="research-host">Known isolate excluded from model training</label>
               <select id="research-host" value={researchHost} onChange={(event) => setResearchHost(event.target.value)}>
                 {researchIsolates.map((item) => <option value={item} key={item}>{item}</option>)}
@@ -677,7 +783,7 @@ export default function App() {
             </div>
           )}
 
-          {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
+          {error && <AnalysisError message={error} />}
           <button className="run-button" onClick={run} disabled={loading || ((mode === "demo" || mode === "research") && !researchHost) || (mode === "upload" && (!fasta.trim() || !capabilities?.novel_isolate_pipeline_ready))}>
             {loading ? <><LoaderCircle className="spin" size={18} />Running XGBoost…</> : <>{mode === "upload" ? capabilities?.novel_isolate_pipeline_ready ? "Run uploaded-genome XGBoost ranking" : "Real ML pipeline unavailable" : "Run XGBoost ranking"} <ArrowRight size={18} /></>}
           </button>
